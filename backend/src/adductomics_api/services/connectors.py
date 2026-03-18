@@ -9,6 +9,34 @@ from adductomics_api.schemas import AdductRecord
 PROTON_MASS = 1.007276466812
 
 
+def _normalize_key(key: str) -> str:
+    normalized = "".join(ch if ch.isalnum() else "_" for ch in key.strip().lower())
+    while "__" in normalized:
+        normalized = normalized.replace("__", "_")
+    return normalized.strip("_")
+
+
+def _prepare_row(row: dict[str, str | None]) -> dict[str, str]:
+    prepared: dict[str, str] = {}
+    for raw_key, raw_value in row.items():
+        if raw_key is None:
+            continue
+        normalized_key = _normalize_key(str(raw_key))
+        if normalized_key in prepared:
+            continue
+        value = "" if raw_value is None else str(raw_value).strip()
+        prepared[normalized_key] = value
+    return prepared
+
+
+def _get_first(prepared_row: dict[str, str], keys: list[str]) -> str | None:
+    for key in keys:
+        value = prepared_row.get(_normalize_key(key))
+        if value:
+            return value
+    return None
+
+
 class AdductBankConnector(Protocol):
     def load_records(self) -> list[AdductRecord]:
         """Load and normalize records from one adduct data source."""
@@ -61,10 +89,12 @@ class HmdbCsvConnector:
     """
     HMDB export connector (CSV).
 
+    Headers are matched case-insensitively and allow separators like space/hyphen/dot.
+
     Expected column aliases:
-      - id: accession | hmdb_id
-      - name: name | metabolite_name
-      - mass: monoisotopic_molecular_weight | exact_mass | monoisotopic_mass
+      - id: accession | hmdb_id | accession_id
+      - name: name | metabolite_name | common_name | chemical_name | compound_name
+      - mass: monoisotopic_molecular_weight | exact_mass | monoisotopic_mass | molecular_weight
       - formula: chemical_formula (optional)
       - smiles: smiles (optional)
       - pathway: pathways | pathway | kegg_pathway (optional)
@@ -76,14 +106,6 @@ class HmdbCsvConnector:
         if ion_mode not in {"neutral", "protonated"}:
             raise ValueError("ion_mode must be 'neutral' or 'protonated'")
         self.ion_mode = ion_mode
-
-    @staticmethod
-    def _get_first(row: dict[str, str], keys: list[str]) -> str | None:
-        for key in keys:
-            value = row.get(key)
-            if value is not None and str(value).strip() != "":
-                return str(value).strip()
-        return None
 
     @staticmethod
     def _normalize_pathway(raw: str | None) -> str | None:
@@ -104,20 +126,41 @@ class HmdbCsvConnector:
         with csv_path.open("r", encoding="utf-8") as fp:
             reader = csv.DictReader(fp)
             for idx, row in enumerate(reader, start=1):
-                hmdb_id = self._get_first(row, ["accession", "hmdb_id"]) or f"HMDB_AUTO_{idx}"
-                name = self._get_first(row, ["name", "metabolite_name"])
+                prepared_row = _prepare_row(row)
+                hmdb_id = _get_first(prepared_row, ["accession", "hmdb_id", "accession_id"]) or f"HMDB_AUTO_{idx}"
+                name = _get_first(
+                    prepared_row,
+                    [
+                        "name",
+                        "metabolite_name",
+                        "common_name",
+                        "chemical_name",
+                        "compound_name",
+                        "iupac_name",
+                    ],
+                )
                 if name is None:
                     raise KeyError("name")
 
-                raw_mass = self._get_first(
-                    row, ["monoisotopic_molecular_weight", "exact_mass", "monoisotopic_mass"]
+                raw_mass = _get_first(
+                    prepared_row,
+                    [
+                        "monoisotopic_molecular_weight",
+                        "exact_mass",
+                        "monoisotopic_mass",
+                        "molecular_weight",
+                        "neutral_mass",
+                    ],
                 )
                 if raw_mass is None:
                     raise KeyError("monoisotopic_molecular_weight")
 
                 neutral_mass = float(raw_mass)
                 precursor_mz = neutral_mass if self.ion_mode == "neutral" else neutral_mass + PROTON_MASS
-                hmdb_isotope = self._get_first(row, ["isotope_ratio"])
+                hmdb_isotope = _get_first(
+                    prepared_row, ["isotope_ratio", "isotope_pattern_ratio", "isotope"]
+                )
+                hmdb_rt = _get_first(prepared_row, ["retention_time", "rt"])
 
                 records.append(
                     AdductRecord(
@@ -127,12 +170,15 @@ class HmdbCsvConnector:
                         precursor_mz=precursor_mz,
                         product_mz=None,
                         neutral_loss=None,
-                        expected_rt=None,
+                        expected_rt=float(hmdb_rt) if hmdb_rt is not None else None,
                         isotope_ratio=float(hmdb_isotope) if hmdb_isotope is not None else None,
-                        formula=self._get_first(row, ["chemical_formula", "formula"]),
-                        smiles=self._get_first(row, ["smiles"]),
+                        formula=_get_first(prepared_row, ["chemical_formula", "formula", "molecular_formula"]),
+                        smiles=_get_first(prepared_row, ["smiles", "smiles_string"]),
                         pathway=self._normalize_pathway(
-                            self._get_first(row, ["pathways", "pathway", "kegg_pathway"])
+                            _get_first(
+                                prepared_row,
+                                ["pathways", "pathway", "kegg_pathway", "smpdb_pathway", "biocyc_pathway"],
+                            )
                         ),
                         evidence_level="predicted",
                     )
@@ -143,6 +189,8 @@ class HmdbCsvConnector:
 class MassBankCsvConnector:
     """
     MassBank export connector (CSV).
+
+    Headers are matched case-insensitively and allow separators like space/hyphen/dot.
 
     Expected column aliases:
       - id: accession | record_id | mb_id
@@ -159,14 +207,6 @@ class MassBankCsvConnector:
     def __init__(self, file_path: str, source_name: str) -> None:
         self.file_path = file_path
         self.source_name = source_name
-
-    @staticmethod
-    def _get_first(row: dict[str, str], keys: list[str]) -> str | None:
-        for key in keys:
-            value = row.get(key)
-            if value is not None and str(value).strip() != "":
-                return str(value).strip()
-        return None
 
     @staticmethod
     def _normalize_pathway(raw: str | None) -> str | None:
@@ -187,22 +227,25 @@ class MassBankCsvConnector:
         with csv_path.open("r", encoding="utf-8") as fp:
             reader = csv.DictReader(fp)
             for idx, row in enumerate(reader, start=1):
-                massbank_id = self._get_first(row, ["accession", "record_id", "mb_id"]) or f"MB_AUTO_{idx}"
-                name = self._get_first(row, ["compound_name", "name"])
+                prepared_row = _prepare_row(row)
+                massbank_id = (
+                    _get_first(prepared_row, ["accession", "record_id", "mb_id", "massbank_id"])
+                    or f"MB_AUTO_{idx}"
+                )
+                name = _get_first(prepared_row, ["compound_name", "name", "chemical_name", "common_name"])
                 if name is None:
                     raise KeyError("compound_name")
 
-                raw_precursor_mz = self._get_first(row, ["precursor_mz", "mz", "exact_mass"])
+                raw_precursor_mz = _get_first(prepared_row, ["precursor_mz", "mz", "exact_mass", "mass"])
                 if raw_precursor_mz is None:
                     raise KeyError("precursor_mz")
 
                 precursor_mz = float(raw_precursor_mz)
-                product_mz = (
-                    float(self._get_first(row, ["product_mz", "fragment_mz"]))
-                    if self._get_first(row, ["product_mz", "fragment_mz"])
-                    else None
-                )
+                raw_product_mz = _get_first(prepared_row, ["product_mz", "fragment_mz"])
+                product_mz = float(raw_product_mz) if raw_product_mz else None
                 neutral_loss = precursor_mz - product_mz if product_mz else None
+                raw_rt = _get_first(prepared_row, ["retention_time", "rt"])
+                raw_isotope = _get_first(prepared_row, ["isotope_ratio", "isotope_pattern_ratio", "isotope"])
 
                 records.append(
                     AdductRecord(
@@ -212,20 +255,12 @@ class MassBankCsvConnector:
                         precursor_mz=precursor_mz,
                         product_mz=product_mz,
                         neutral_loss=neutral_loss if neutral_loss and neutral_loss > 0 else None,
-                        expected_rt=(
-                            float(self._get_first(row, ["retention_time", "rt"]))
-                            if self._get_first(row, ["retention_time", "rt"])
-                            else None
-                        ),
-                        isotope_ratio=(
-                            float(self._get_first(row, ["isotope_ratio"]))
-                            if self._get_first(row, ["isotope_ratio"])
-                            else None
-                        ),
-                        formula=self._get_first(row, ["formula", "molecular_formula"]),
-                        smiles=self._get_first(row, ["smiles"]),
+                        expected_rt=(float(raw_rt) if raw_rt else None),
+                        isotope_ratio=(float(raw_isotope) if raw_isotope else None),
+                        formula=_get_first(prepared_row, ["formula", "molecular_formula"]),
+                        smiles=_get_first(prepared_row, ["smiles", "smiles_string"]),
                         pathway=self._normalize_pathway(
-                            self._get_first(row, ["pathway", "pathways", "class"])
+                            _get_first(prepared_row, ["pathway", "pathways", "class", "kegg_pathway"])
                         ),
                         evidence_level="reported",
                     )

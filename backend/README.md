@@ -27,10 +27,14 @@ Open:
 
 HMDB CSV expected column aliases:
 
-- `accession` or `hmdb_id`
-- `name` or `metabolite_name`
-- `monoisotopic_molecular_weight` (or `exact_mass`, `monoisotopic_mass`)
+- `accession`, `hmdb_id`, or `accession_id`
+- `name`, `metabolite_name`, `common_name`, or `chemical_name`
+- `monoisotopic_molecular_weight` (or `exact_mass`, `monoisotopic_mass`, `molecular_weight`)
 - optional: `chemical_formula`, `smiles`, `pathways`
+
+Notes:
+- Header matching is case-insensitive.
+- Spaces/hyphens/dots in header names are tolerated.
 
 MassBank CSV expected column aliases:
 

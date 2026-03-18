@@ -78,3 +78,31 @@ def test_pipeline_massbank_ingest(tmp_path: Path) -> None:
     assert matched["expected_rt"] == 4.1
     assert matched["isotope_ratio"] == 0.24
     assert matched["neutral_loss"] > 0
+
+
+def test_pipeline_hmdb_case_insensitive_alias_ingest(tmp_path: Path) -> None:
+    db_path = tmp_path / "test_hmdb_alias.db"
+    repo = AdductRepository(str(db_path))
+    pipeline = AnalysisPipeline(repository=repo)
+
+    hmdb_alias_csv = tmp_path / "hmdb_alias.csv"
+    hmdb_alias_csv.write_text(
+        (
+            "Accession ID,Common Name,Monoisotopic Molecular Weight,Chemical Formula,Pathways,Retention Time\n"
+            "HMDBX0001,Alias Compound,200.1000,C8H12N2O4,DNA Repair;Oxidative stress,3.3\n"
+        ),
+        encoding="utf-8",
+    )
+
+    inserted = pipeline.ingest_hmdb_csv(
+        file_path=str(hmdb_alias_csv),
+        source_name="hmdb_alias_test",
+        ion_mode="protonated",
+    )
+    assert inserted == 1
+
+    adducts = repo.list_adducts(limit=5)
+    assert len(adducts) == 1
+    assert adducts[0]["adduct_name"] == "Alias Compound"
+    assert adducts[0]["pathway"] == "DNA Repair"
+    assert abs(adducts[0]["expected_rt"] - 3.3) < 1e-6

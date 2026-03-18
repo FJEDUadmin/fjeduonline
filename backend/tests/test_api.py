@@ -82,6 +82,24 @@ def test_massbank_file_path_ingest_endpoint() -> None:
     assert payload["source_name"] == "massbank_file_path"
 
 
+def test_hmdb_upload_alias_columns_endpoint() -> None:
+    client = TestClient(app)
+    hmdb_alias_csv = (
+        "Accession ID,Common Name,Monoisotopic Molecular Weight,Chemical Formula,Pathways\n"
+        "HMDBX0002,Uploaded Alias Compound,199.1111,C7H9N3O3,DNA Damage Response\n"
+    ).encode("utf-8")
+
+    response = client.post(
+        "/api/v1/ingest/adduct-bank/upload-hmdb",
+        data={"source_name": "hmdb_alias_upload", "ion_mode": "protonated"},
+        files={"file": ("hmdb_alias.csv", BytesIO(hmdb_alias_csv), "text/csv")},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ingested_records"] == 1
+    assert payload["source_name"] == "hmdb_alias_upload"
+
+
 def test_upload_ingest_and_hmdb_endpoints() -> None:
     client = TestClient(app)
     data_dir = Path(__file__).resolve().parents[1] / "data"
