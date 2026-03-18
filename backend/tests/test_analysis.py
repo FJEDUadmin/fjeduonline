@@ -106,3 +106,28 @@ def test_pipeline_hmdb_case_insensitive_alias_ingest(tmp_path: Path) -> None:
     assert adducts[0]["adduct_name"] == "Alias Compound"
     assert adducts[0]["pathway"] == "DNA Repair"
     assert abs(adducts[0]["expected_rt"] - 3.3) < 1e-6
+
+
+def test_pipeline_hmdb_non_utf8_cp1252_ingest(tmp_path: Path) -> None:
+    db_path = tmp_path / "test_hmdb_cp1252.db"
+    repo = AdductRepository(str(db_path))
+    pipeline = AnalysisPipeline(repository=repo)
+
+    hmdb_cp1252_csv = tmp_path / "hmdb_cp1252.csv"
+    hmdb_cp1252_csv.write_bytes(
+        (
+            "Accession,Common Name,Monoisotopic Molecular Weight,Chemical Formula,Pathways\n"
+            "HMDBX0003,Compound \xa3,210.2000,C9H10N2O4,DNA Damage Response\n"
+        ).encode("cp1252")
+    )
+
+    inserted = pipeline.ingest_hmdb_csv(
+        file_path=str(hmdb_cp1252_csv),
+        source_name="hmdb_cp1252_test",
+        ion_mode="protonated",
+    )
+    assert inserted == 1
+
+    adducts = repo.list_adducts(limit=5)
+    assert len(adducts) == 1
+    assert "Compound" in adducts[0]["adduct_name"]

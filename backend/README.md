@@ -35,6 +35,7 @@ HMDB CSV expected column aliases:
 Notes:
 - Header matching is case-insensitive.
 - Spaces/hyphens/dots in header names are tolerated.
+- CSV encoding fallback is automatic (UTF-8, UTF-8-SIG, Big5/CP950, CP1252, GB18030, Latin-1).
 
 MassBank CSV expected column aliases:
 

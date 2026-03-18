@@ -1,12 +1,22 @@
 from __future__ import annotations
 
 import csv
+import io
 from pathlib import Path
 from typing import Protocol
 
 from adductomics_api.schemas import AdductRecord
 
 PROTON_MASS = 1.007276466812
+CSV_ENCODING_CANDIDATES = [
+    "utf-8",
+    "utf-8-sig",
+    "big5",
+    "cp950",
+    "cp1252",
+    "gb18030",
+    "latin-1",
+]
 
 
 def _normalize_key(key: str) -> str:
@@ -37,6 +47,23 @@ def _get_first(prepared_row: dict[str, str], keys: list[str]) -> str | None:
     return None
 
 
+def _read_csv_rows_with_fallback(csv_path: Path) -> list[dict[str, str | None]]:
+    raw = csv_path.read_bytes()
+    decode_errors: list[str] = []
+    for encoding in CSV_ENCODING_CANDIDATES:
+        try:
+            text = raw.decode(encoding)
+            reader = csv.DictReader(io.StringIO(text))
+            return list(reader)
+        except UnicodeDecodeError as exc:
+            decode_errors.append(f"{encoding}: {exc}")
+
+    raise ValueError(
+        "Unable to decode CSV file with supported encodings "
+        f"{CSV_ENCODING_CANDIDATES}. Decode errors: {decode_errors}"
+    )
+
+
 class AdductBankConnector(Protocol):
     def load_records(self) -> list[AdductRecord]:
         """Load and normalize records from one adduct data source."""
@@ -64,24 +91,22 @@ class CsvAdductConnector:
             raise FileNotFoundError(f"Adduct CSV not found: {self.file_path}")
 
         records: list[AdductRecord] = []
-        with csv_path.open("r", encoding="utf-8") as fp:
-            reader = csv.DictReader(fp)
-            for row in reader:
-                rec = AdductRecord(
-                    adduct_id=row["adduct_id"],
-                    source_name=self.source_name,
-                    adduct_name=row["adduct_name"],
-                    precursor_mz=float(row["precursor_mz"]),
-                    product_mz=float(row["product_mz"]) if row.get("product_mz") else None,
-                    neutral_loss=float(row["neutral_loss"]) if row.get("neutral_loss") else None,
-                    expected_rt=float(row["expected_rt"]) if row.get("expected_rt") else None,
-                    isotope_ratio=float(row["isotope_ratio"]) if row.get("isotope_ratio") else None,
-                    formula=row.get("formula") or None,
-                    smiles=row.get("smiles") or None,
-                    pathway=row.get("pathway") or None,
-                    evidence_level=row.get("evidence_level") or "reported",
-                )
-                records.append(rec)
+        for row in _read_csv_rows_with_fallback(csv_path):
+            rec = AdductRecord(
+                adduct_id=row["adduct_id"],
+                source_name=self.source_name,
+                adduct_name=row["adduct_name"],
+                precursor_mz=float(row["precursor_mz"]),
+                product_mz=float(row["product_mz"]) if row.get("product_mz") else None,
+                neutral_loss=float(row["neutral_loss"]) if row.get("neutral_loss") else None,
+                expected_rt=float(row["expected_rt"]) if row.get("expected_rt") else None,
+                isotope_ratio=float(row["isotope_ratio"]) if row.get("isotope_ratio") else None,
+                formula=row.get("formula") or None,
+                smiles=row.get("smiles") or None,
+                pathway=row.get("pathway") or None,
+                evidence_level=row.get("evidence_level") or "reported",
+            )
+            records.append(rec)
         return records
 
 
@@ -123,66 +148,64 @@ class HmdbCsvConnector:
             raise FileNotFoundError(f"HMDB CSV not found: {self.file_path}")
 
         records: list[AdductRecord] = []
-        with csv_path.open("r", encoding="utf-8") as fp:
-            reader = csv.DictReader(fp)
-            for idx, row in enumerate(reader, start=1):
-                prepared_row = _prepare_row(row)
-                hmdb_id = _get_first(prepared_row, ["accession", "hmdb_id", "accession_id"]) or f"HMDB_AUTO_{idx}"
-                name = _get_first(
-                    prepared_row,
-                    [
-                        "name",
-                        "metabolite_name",
-                        "common_name",
-                        "chemical_name",
-                        "compound_name",
-                        "iupac_name",
-                    ],
-                )
-                if name is None:
-                    raise KeyError("name")
+        for idx, row in enumerate(_read_csv_rows_with_fallback(csv_path), start=1):
+            prepared_row = _prepare_row(row)
+            hmdb_id = _get_first(prepared_row, ["accession", "hmdb_id", "accession_id"]) or f"HMDB_AUTO_{idx}"
+            name = _get_first(
+                prepared_row,
+                [
+                    "name",
+                    "metabolite_name",
+                    "common_name",
+                    "chemical_name",
+                    "compound_name",
+                    "iupac_name",
+                ],
+            )
+            if name is None:
+                raise KeyError("name")
 
-                raw_mass = _get_first(
-                    prepared_row,
-                    [
-                        "monoisotopic_molecular_weight",
-                        "exact_mass",
-                        "monoisotopic_mass",
-                        "molecular_weight",
-                        "neutral_mass",
-                    ],
-                )
-                if raw_mass is None:
-                    raise KeyError("monoisotopic_molecular_weight")
+            raw_mass = _get_first(
+                prepared_row,
+                [
+                    "monoisotopic_molecular_weight",
+                    "exact_mass",
+                    "monoisotopic_mass",
+                    "molecular_weight",
+                    "neutral_mass",
+                ],
+            )
+            if raw_mass is None:
+                raise KeyError("monoisotopic_molecular_weight")
 
-                neutral_mass = float(raw_mass)
-                precursor_mz = neutral_mass if self.ion_mode == "neutral" else neutral_mass + PROTON_MASS
-                hmdb_isotope = _get_first(
-                    prepared_row, ["isotope_ratio", "isotope_pattern_ratio", "isotope"]
-                )
-                hmdb_rt = _get_first(prepared_row, ["retention_time", "rt"])
+            neutral_mass = float(raw_mass)
+            precursor_mz = neutral_mass if self.ion_mode == "neutral" else neutral_mass + PROTON_MASS
+            hmdb_isotope = _get_first(
+                prepared_row, ["isotope_ratio", "isotope_pattern_ratio", "isotope"]
+            )
+            hmdb_rt = _get_first(prepared_row, ["retention_time", "rt"])
 
-                records.append(
-                    AdductRecord(
-                        adduct_id=hmdb_id,
-                        source_name=self.source_name,
-                        adduct_name=name,
-                        precursor_mz=precursor_mz,
-                        product_mz=None,
-                        neutral_loss=None,
-                        expected_rt=float(hmdb_rt) if hmdb_rt is not None else None,
-                        isotope_ratio=float(hmdb_isotope) if hmdb_isotope is not None else None,
-                        formula=_get_first(prepared_row, ["chemical_formula", "formula", "molecular_formula"]),
-                        smiles=_get_first(prepared_row, ["smiles", "smiles_string"]),
-                        pathway=self._normalize_pathway(
-                            _get_first(
-                                prepared_row,
-                                ["pathways", "pathway", "kegg_pathway", "smpdb_pathway", "biocyc_pathway"],
-                            )
-                        ),
-                        evidence_level="predicted",
-                    )
+            records.append(
+                AdductRecord(
+                    adduct_id=hmdb_id,
+                    source_name=self.source_name,
+                    adduct_name=name,
+                    precursor_mz=precursor_mz,
+                    product_mz=None,
+                    neutral_loss=None,
+                    expected_rt=float(hmdb_rt) if hmdb_rt is not None else None,
+                    isotope_ratio=float(hmdb_isotope) if hmdb_isotope is not None else None,
+                    formula=_get_first(prepared_row, ["chemical_formula", "formula", "molecular_formula"]),
+                    smiles=_get_first(prepared_row, ["smiles", "smiles_string"]),
+                    pathway=self._normalize_pathway(
+                        _get_first(
+                            prepared_row,
+                            ["pathways", "pathway", "kegg_pathway", "smpdb_pathway", "biocyc_pathway"],
+                        )
+                    ),
+                    evidence_level="predicted",
                 )
+            )
         return records
 
 
@@ -224,47 +247,45 @@ class MassBankCsvConnector:
             raise FileNotFoundError(f"MassBank CSV not found: {self.file_path}")
 
         records: list[AdductRecord] = []
-        with csv_path.open("r", encoding="utf-8") as fp:
-            reader = csv.DictReader(fp)
-            for idx, row in enumerate(reader, start=1):
-                prepared_row = _prepare_row(row)
-                massbank_id = (
-                    _get_first(prepared_row, ["accession", "record_id", "mb_id", "massbank_id"])
-                    or f"MB_AUTO_{idx}"
+        for idx, row in enumerate(_read_csv_rows_with_fallback(csv_path), start=1):
+            prepared_row = _prepare_row(row)
+            massbank_id = (
+                _get_first(prepared_row, ["accession", "record_id", "mb_id", "massbank_id"])
+                or f"MB_AUTO_{idx}"
+            )
+            name = _get_first(prepared_row, ["compound_name", "name", "chemical_name", "common_name"])
+            if name is None:
+                raise KeyError("compound_name")
+
+            raw_precursor_mz = _get_first(prepared_row, ["precursor_mz", "mz", "exact_mass", "mass"])
+            if raw_precursor_mz is None:
+                raise KeyError("precursor_mz")
+
+            precursor_mz = float(raw_precursor_mz)
+            raw_product_mz = _get_first(prepared_row, ["product_mz", "fragment_mz"])
+            product_mz = float(raw_product_mz) if raw_product_mz else None
+            neutral_loss = precursor_mz - product_mz if product_mz else None
+            raw_rt = _get_first(prepared_row, ["retention_time", "rt"])
+            raw_isotope = _get_first(prepared_row, ["isotope_ratio", "isotope_pattern_ratio", "isotope"])
+
+            records.append(
+                AdductRecord(
+                    adduct_id=massbank_id,
+                    source_name=self.source_name,
+                    adduct_name=name,
+                    precursor_mz=precursor_mz,
+                    product_mz=product_mz,
+                    neutral_loss=neutral_loss if neutral_loss and neutral_loss > 0 else None,
+                    expected_rt=(float(raw_rt) if raw_rt else None),
+                    isotope_ratio=(float(raw_isotope) if raw_isotope else None),
+                    formula=_get_first(prepared_row, ["formula", "molecular_formula"]),
+                    smiles=_get_first(prepared_row, ["smiles", "smiles_string"]),
+                    pathway=self._normalize_pathway(
+                        _get_first(prepared_row, ["pathway", "pathways", "class", "kegg_pathway"])
+                    ),
+                    evidence_level="reported",
                 )
-                name = _get_first(prepared_row, ["compound_name", "name", "chemical_name", "common_name"])
-                if name is None:
-                    raise KeyError("compound_name")
-
-                raw_precursor_mz = _get_first(prepared_row, ["precursor_mz", "mz", "exact_mass", "mass"])
-                if raw_precursor_mz is None:
-                    raise KeyError("precursor_mz")
-
-                precursor_mz = float(raw_precursor_mz)
-                raw_product_mz = _get_first(prepared_row, ["product_mz", "fragment_mz"])
-                product_mz = float(raw_product_mz) if raw_product_mz else None
-                neutral_loss = precursor_mz - product_mz if product_mz else None
-                raw_rt = _get_first(prepared_row, ["retention_time", "rt"])
-                raw_isotope = _get_first(prepared_row, ["isotope_ratio", "isotope_pattern_ratio", "isotope"])
-
-                records.append(
-                    AdductRecord(
-                        adduct_id=massbank_id,
-                        source_name=self.source_name,
-                        adduct_name=name,
-                        precursor_mz=precursor_mz,
-                        product_mz=product_mz,
-                        neutral_loss=neutral_loss if neutral_loss and neutral_loss > 0 else None,
-                        expected_rt=(float(raw_rt) if raw_rt else None),
-                        isotope_ratio=(float(raw_isotope) if raw_isotope else None),
-                        formula=_get_first(prepared_row, ["formula", "molecular_formula"]),
-                        smiles=_get_first(prepared_row, ["smiles", "smiles_string"]),
-                        pathway=self._normalize_pathway(
-                            _get_first(prepared_row, ["pathway", "pathways", "class", "kegg_pathway"])
-                        ),
-                        evidence_level="reported",
-                    )
-                )
+            )
         return records
 
 
