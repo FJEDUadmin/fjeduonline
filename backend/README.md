@@ -4,10 +4,12 @@ FastAPI backend for:
 
 - adduct bank ingestion
 - HMDB CSV connector ingestion
+- MassBank CSV connector ingestion
 - LC-MS MRM/NL transition analysis
 - candidate adduct identification
-- pathway enrichment scoring
+- pathway enrichment scoring with confidence model v2
 - browser dashboard for upload/analysis workflows
+- run-level provenance metadata (`run_id`, parameters, scoring version)
 
 Run locally:
 
@@ -29,3 +31,10 @@ HMDB CSV expected column aliases:
 - `name` or `metabolite_name`
 - `monoisotopic_molecular_weight` (or `exact_mass`, `monoisotopic_mass`)
 - optional: `chemical_formula`, `smiles`, `pathways`
+
+MassBank CSV expected column aliases:
+
+- `record_id` / `accession` / `mb_id`
+- `compound_name` / `name`
+- `precursor_mz` (or `mz`, `exact_mass`)
+- optional: `product_mz`, `retention_time`, `isotope_ratio`, `formula`, `pathway`

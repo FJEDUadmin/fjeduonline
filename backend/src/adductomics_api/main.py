@@ -16,10 +16,11 @@ from adductomics_api.schemas import (
     AnalyzeTransitionsRequest,
     IngestCsvRequest,
     IngestHmdbRequest,
+    IngestMassBankRequest,
 )
 from adductomics_api.services.pipeline import AnalysisPipeline
 
-app = FastAPI(title="DNA Adductomics Platform API", version="0.1.0")
+app = FastAPI(title="DNA Adductomics Platform API", version="0.2.0")
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 if STATIC_DIR.exists():
@@ -28,7 +29,7 @@ if STATIC_DIR.exists():
 
 def get_pipeline(settings: Settings = Depends(get_settings)) -> AnalysisPipeline:
     repo = AdductRepository(sqlite_path=settings.sqlite_path)
-    return AnalysisPipeline(repository=repo)
+    return AnalysisPipeline(repository=repo, software_version=settings.app_version)
 
 
 def _ensure_upload_dir(settings: Settings) -> Path:
@@ -155,6 +156,57 @@ def ingest_hmdb_upload(
     }
 
 
+@app.post("/api/v1/ingest/adduct-bank/massbank-csv")
+def ingest_massbank_csv(
+    payload: IngestMassBankRequest, pipeline: AnalysisPipeline = Depends(get_pipeline)
+) -> dict:
+    try:
+        inserted = pipeline.ingest_massbank_csv(
+            file_path=payload.file_path,
+            source_name=payload.source_name,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except KeyError as exc:
+        raise HTTPException(status_code=400, detail=f"MassBank schema missing field: {exc}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid value in MassBank CSV: {exc}") from exc
+
+    return {
+        "ingested_records": inserted,
+        "source_name": payload.source_name,
+    }
+
+
+@app.post("/api/v1/ingest/adduct-bank/upload-massbank")
+def ingest_massbank_upload(
+    source_name: str = Form(default="massbank"),
+    file: UploadFile = File(...),
+    pipeline: AnalysisPipeline = Depends(get_pipeline),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    upload_path = _save_upload(
+        file=file,
+        upload_dir=_ensure_upload_dir(settings),
+        prefix="massbank_export",
+    )
+    try:
+        inserted = pipeline.ingest_massbank_csv(
+            file_path=upload_path,
+            source_name=source_name,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=400, detail=f"MassBank schema missing field: {exc}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid value in MassBank CSV: {exc}") from exc
+
+    return {
+        "ingested_records": inserted,
+        "source_name": source_name,
+        "uploaded_file_path": upload_path,
+    }
+
+
 @app.post("/api/v1/analyze/mrm-nl", response_model=AnalysisResponse)
 def analyze_mrm_nl(
     payload: AnalyzeTransitionsRequest, pipeline: AnalysisPipeline = Depends(get_pipeline)
@@ -166,6 +218,8 @@ def analyze_mrm_nl(
         transitions=payload.transitions,
         tolerance_ppm=payload.tolerance_ppm,
         neutral_loss_tolerance_da=payload.neutral_loss_tolerance_da,
+        rt_tolerance_min=payload.rt_tolerance_min,
+        isotope_tolerance=payload.isotope_tolerance,
         top_k_per_transition=payload.top_k_per_transition,
     )
 
@@ -187,6 +241,8 @@ def analyze_mrm_nl_csv(
         transitions=transitions,
         tolerance_ppm=payload.tolerance_ppm,
         neutral_loss_tolerance_da=payload.neutral_loss_tolerance_da,
+        rt_tolerance_min=payload.rt_tolerance_min,
+        isotope_tolerance=payload.isotope_tolerance,
         top_k_per_transition=payload.top_k_per_transition,
     )
 
@@ -196,6 +252,8 @@ def analyze_mrm_nl_upload_csv(
     sample_id: str = Form(...),
     tolerance_ppm: float = Form(default=10.0),
     neutral_loss_tolerance_da: float = Form(default=0.5),
+    rt_tolerance_min: float = Form(default=0.5),
+    isotope_tolerance: float = Form(default=0.15),
     top_k_per_transition: int = Form(default=5),
     file: UploadFile = File(...),
     pipeline: AnalysisPipeline = Depends(get_pipeline),
@@ -217,6 +275,8 @@ def analyze_mrm_nl_upload_csv(
         transitions=transitions,
         tolerance_ppm=tolerance_ppm,
         neutral_loss_tolerance_da=neutral_loss_tolerance_da,
+        rt_tolerance_min=rt_tolerance_min,
+        isotope_tolerance=isotope_tolerance,
         top_k_per_transition=top_k_per_transition,
     )
 

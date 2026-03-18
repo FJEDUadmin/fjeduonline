@@ -2,21 +2,26 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
+from datetime import datetime, timezone
+from uuid import uuid4
 
 from adductomics_api.repository import AdductRepository
 from adductomics_api.schemas import (
+    AnalysisMetadata,
+    AnalysisParameters,
     AnalysisResponse,
     CandidateAdduct,
     MRMTransition,
 )
-from adductomics_api.services.connectors import CsvAdductConnector, HmdbCsvConnector
-from adductomics_api.services.identifier import score_candidates
+from adductomics_api.services.connectors import CsvAdductConnector, HmdbCsvConnector, MassBankCsvConnector
+from adductomics_api.services.identifier import SCORING_VERSION, score_candidates
 from adductomics_api.services.pathway import score_pathways
 
 
 class AnalysisPipeline:
-    def __init__(self, repository: AdductRepository) -> None:
+    def __init__(self, repository: AdductRepository, software_version: str = "0.1.0") -> None:
         self.repository = repository
+        self.software_version = software_version
 
     def ingest_adduct_csv(self, file_path: str, source_name: str) -> int:
         connector = CsvAdductConnector(file_path=file_path, source_name=source_name)
@@ -32,6 +37,11 @@ class AnalysisPipeline:
         records = connector.load_records()
         return self.repository.upsert_adducts(records)
 
+    def ingest_massbank_csv(self, file_path: str, source_name: str) -> int:
+        connector = MassBankCsvConnector(file_path=file_path, source_name=source_name)
+        records = connector.load_records()
+        return self.repository.upsert_adducts(records)
+
     def parse_transition_csv(self, file_path: str, sample_id: str) -> list[MRMTransition]:
         csv_path = Path(file_path)
         if not csv_path.exists():
@@ -41,16 +51,24 @@ class AnalysisPipeline:
         with csv_path.open("r", encoding="utf-8") as fp:
             reader = csv.DictReader(fp)
             for idx, row in enumerate(reader, start=1):
+                precursor_mz = float(row["precursor_mz"])
+                product_mz = float(row["product_mz"])
+                neutral_loss = (
+                    float(row["neutral_loss"])
+                    if row.get("neutral_loss")
+                    else (precursor_mz - product_mz if precursor_mz > product_mz else None)
+                )
                 transitions.append(
                     MRMTransition(
                         transition_id=row.get("transition_id") or f"{sample_id}_T{idx}",
                         sample_id=sample_id,
-                        precursor_mz=float(row["precursor_mz"]),
-                        product_mz=float(row["product_mz"]),
-                        neutral_loss=float(row["neutral_loss"]) if row.get("neutral_loss") else None,
+                        precursor_mz=precursor_mz,
+                        product_mz=product_mz,
+                        neutral_loss=neutral_loss,
                         retention_time=(
                             float(row["retention_time"]) if row.get("retention_time") else None
                         ),
+                        isotope_ratio=float(row["isotope_ratio"]) if row.get("isotope_ratio") else None,
                         intensity=float(row["intensity"]) if row.get("intensity") else None,
                     )
                 )
@@ -61,6 +79,8 @@ class AnalysisPipeline:
         transitions: list[MRMTransition],
         tolerance_ppm: float,
         neutral_loss_tolerance_da: float,
+        rt_tolerance_min: float,
+        isotope_tolerance: float,
         top_k_per_transition: int,
     ) -> AnalysisResponse:
         all_candidates: list[CandidateAdduct] = []
@@ -71,6 +91,8 @@ class AnalysisPipeline:
                 candidate_rows=rows,
                 tolerance_ppm=tolerance_ppm,
                 nl_tolerance_da=neutral_loss_tolerance_da,
+                rt_tolerance_min=rt_tolerance_min,
+                isotope_tolerance=isotope_tolerance,
                 top_k=top_k_per_transition,
             )
             all_candidates.extend(scored)
@@ -92,9 +114,23 @@ class AnalysisPipeline:
         )
 
         sample_id = transitions[0].sample_id if transitions else "unknown"
+        metadata = AnalysisMetadata(
+            run_id=f"run_{uuid4().hex[:12]}",
+            generated_at=datetime.now(timezone.utc).isoformat(),
+            software_version=self.software_version,
+            parameters=AnalysisParameters(
+                tolerance_ppm=tolerance_ppm,
+                neutral_loss_tolerance_da=neutral_loss_tolerance_da,
+                rt_tolerance_min=rt_tolerance_min,
+                isotope_tolerance=isotope_tolerance,
+                top_k_per_transition=top_k_per_transition,
+                scoring_version=SCORING_VERSION,
+            ),
+        )
         return AnalysisResponse(
             sample_id=sample_id,
             transitions_analyzed=len(transitions),
             candidates=unique_candidates,
             pathway_scores=pathway_scores,
+            metadata=metadata,
         )

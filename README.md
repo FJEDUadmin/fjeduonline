@@ -5,12 +5,13 @@
 目前版本提供：
 
 - DNA adduct 資料庫統一 schema（可匯入多來源資料）
-- HMDB CSV connector（第一個正式 databank adapter）
+- HMDB + MassBank CSV connector（已具備兩個正式 databank adapter）
 - LC-MS MRM / Neutral Loss (NL) 分析流程
-- Adduct 候選識別與信心分數排序
+- Adduct 候選識別與信心分數排序（scoring model v2，含 RT/isotope 可選特徵）
 - 初版 pathway enrichment 分析
 - FastAPI 服務介面與測試
 - Web dashboard（檔案上傳 + 分析結果可視化）
+- 分析 run metadata（run_id、參數、版本）可追溯
 
 ---
 
@@ -59,7 +60,7 @@ docs/
 
 ```bash
 cd backend
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 uvicorn adductomics_api.main:app --reload
@@ -84,6 +85,7 @@ docker compose up --build
 1. 匯入 adduct 資料庫（CSV）
 2. 提交 MRM/NL transition（JSON 或 CSV）
 3. 取得候選 adduct 與 pathway enrichment
+4. 保存/比對每次分析 metadata（參數與 scoring 版本）
 
 詳細 API payload 請看 `/docs` 自動文件。
 
@@ -95,7 +97,7 @@ Dashboard：
 
 ## 5) 下一步建議（期刊等級）
 
-1. **資料庫連接器擴充**：HMDB、MassBank、PubChem、文獻 supplementary table
+1. **資料庫連接器擴充**：PubChem、METLIN 匯出、文獻 supplementary table（HMDB/MassBank 已完成）
 2. **結構層級特徵**：同位素 pattern、RT model、MS/MS fragment rules
 3. **統計嚴謹化**：FDR 控制、批次效應校正、跨儀器校準
 4. **可追溯性**：分析參數版本化、immutable run artifact、審計日誌

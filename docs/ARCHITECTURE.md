@@ -12,7 +12,7 @@
 ### A) Ingestion Layer
 
 - Connector interface (CSV today, external databanks next)
-- HMDB CSV connector implemented as first formal databank adapter
+- HMDB and MassBank CSV connectors implemented as formal databank adapters
 - Source normalization to canonical `AdductRecord`
 - Version-tagged ingestion pipeline
 
@@ -20,8 +20,9 @@
 
 - Transition parsing (MRM + neutral loss)
 - Candidate retrieval by m/z and optional neutral loss constraints
-- Multi-factor confidence scoring
+- Multi-factor confidence scoring (v2: precursor/product/NL/RT/isotope)
 - Pathway enrichment from matched candidates
+- Run provenance metadata for reproducibility
 
 ### C) Service Layer
 

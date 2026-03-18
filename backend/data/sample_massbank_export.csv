@@ -1,0 +1,4 @@
+record_id,compound_name,precursor_mz,product_mz,retention_time,isotope_ratio,formula,pathway
+MB000001,8-oxo-dG reference,284.0988,168.0661,4.10,0.24,C10H13N5O5,Oxidative DNA Damage
+MB000002,M1dG reference,304.1039,188.0711,5.68,0.31,C11H13N5O6,Lipid Peroxidation
+MB000003,O6-methyl-dG reference,282.0831,166.0503,3.52,0.20,C11H15N5O4,Alkylation Damage

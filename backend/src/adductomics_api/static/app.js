@@ -1,6 +1,8 @@
 const statusBox = document.getElementById("statusBox");
+const metaBox = document.getElementById("metaBox");
 const ingestGenericForm = document.getElementById("ingestGenericForm");
 const ingestHmdbForm = document.getElementById("ingestHmdbForm");
+const ingestMassBankForm = document.getElementById("ingestMassBankForm");
 const analyzeForm = document.getElementById("analyzeForm");
 
 const candidatesBody = document.querySelector("#candidatesTable tbody");
@@ -14,7 +16,7 @@ function setStatus(message, isError = false) {
 function renderCandidates(candidates) {
   candidatesBody.innerHTML = "";
   if (!Array.isArray(candidates) || candidates.length === 0) {
-    candidatesBody.innerHTML = "<tr><td colspan='8'>No candidates found.</td></tr>";
+    candidatesBody.innerHTML = "<tr><td colspan='11'>No candidates found.</td></tr>";
     return;
   }
 
@@ -27,11 +29,32 @@ function renderCandidates(candidates) {
       <td>${item.pathway ?? ""}</td>
       <td>${Number(item.ppm_error).toFixed(3)}</td>
       <td>${item.nl_error == null ? "" : Number(item.nl_error).toFixed(4)}</td>
+      <td>${item.rt_error == null ? "" : Number(item.rt_error).toFixed(3)}</td>
+      <td>${item.isotope_error == null ? "" : Number(item.isotope_error).toFixed(4)}</td>
       <td>${Number(item.confidence_score).toFixed(4)}</td>
+      <td>${item.component_scores ? JSON.stringify(item.component_scores) : ""}</td>
       <td>${Array.isArray(item.matched_by) ? item.matched_by.join(", ") : ""}</td>
     `;
     candidatesBody.appendChild(tr);
   }
+}
+
+function renderMetadata(metadata) {
+  if (!metadata) {
+    metaBox.textContent = "Run metadata unavailable.";
+    return;
+  }
+  const params = metadata.parameters || {};
+  metaBox.textContent =
+    `Run ID: ${metadata.run_id}\n` +
+    `Generated: ${metadata.generated_at}\n` +
+    `Software Version: ${metadata.software_version}\n` +
+    `Scoring: ${params.scoring_version}\n` +
+    `Tolerance (ppm): ${params.tolerance_ppm}\n` +
+    `NL Tolerance (Da): ${params.neutral_loss_tolerance_da}\n` +
+    `RT Tolerance (min): ${params.rt_tolerance_min}\n` +
+    `Isotope Tolerance: ${params.isotope_tolerance}\n` +
+    `Top-K: ${params.top_k_per_transition}`;
 }
 
 function renderPathways(pathways) {
@@ -90,6 +113,20 @@ ingestHmdbForm.addEventListener("submit", async (event) => {
   }
 });
 
+ingestMassBankForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    setStatus("Uploading MassBank CSV...");
+    const formData = new FormData(ingestMassBankForm);
+    const result = await postForm("/api/v1/ingest/adduct-bank/upload-massbank", formData);
+    setStatus(
+      `MassBank CSV ingested.\nRecords: ${result.ingested_records}\nSource: ${result.source_name}`
+    );
+  } catch (error) {
+    setStatus(`MassBank ingest failed: ${error.message}`, true);
+  }
+});
+
 analyzeForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
@@ -99,6 +136,7 @@ analyzeForm.addEventListener("submit", async (event) => {
     setStatus(
       `Analysis complete.\nSample: ${result.sample_id}\nTransitions: ${result.transitions_analyzed}\nCandidates: ${result.candidates.length}`
     );
+    renderMetadata(result.metadata);
     renderCandidates(result.candidates);
     renderPathways(result.pathway_scores);
   } catch (error) {

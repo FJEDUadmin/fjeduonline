@@ -37,6 +37,8 @@ class AdductRepository:
                     precursor_mz REAL NOT NULL,
                     product_mz REAL,
                     neutral_loss REAL,
+                    expected_rt REAL,
+                    isotope_ratio REAL,
                     formula TEXT,
                     smiles TEXT,
                     pathway TEXT,
@@ -45,6 +47,16 @@ class AdductRepository:
                 )
                 """
             )
+            self._ensure_optional_columns(conn)
+
+    @staticmethod
+    def _ensure_optional_columns(conn: sqlite3.Connection) -> None:
+        rows = conn.execute("PRAGMA table_info(adducts)").fetchall()
+        existing_columns = {row[1] for row in rows}
+        if "expected_rt" not in existing_columns:
+            conn.execute("ALTER TABLE adducts ADD COLUMN expected_rt REAL")
+        if "isotope_ratio" not in existing_columns:
+            conn.execute("ALTER TABLE adducts ADD COLUMN isotope_ratio REAL")
 
     def upsert_adducts(self, records: list[AdductRecord]) -> int:
         if not records:
@@ -54,14 +66,16 @@ class AdductRepository:
                 """
                 INSERT INTO adducts (
                     adduct_id, source_name, adduct_name, precursor_mz, product_mz, neutral_loss,
-                    formula, smiles, pathway, evidence_level
+                    expected_rt, isotope_ratio, formula, smiles, pathway, evidence_level
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(adduct_id, source_name) DO UPDATE SET
                     adduct_name=excluded.adduct_name,
                     precursor_mz=excluded.precursor_mz,
                     product_mz=excluded.product_mz,
                     neutral_loss=excluded.neutral_loss,
+                    expected_rt=excluded.expected_rt,
+                    isotope_ratio=excluded.isotope_ratio,
                     formula=excluded.formula,
                     smiles=excluded.smiles,
                     pathway=excluded.pathway,
@@ -75,6 +89,8 @@ class AdductRepository:
                         rec.precursor_mz,
                         rec.product_mz,
                         rec.neutral_loss,
+                        rec.expected_rt,
+                        rec.isotope_ratio,
                         rec.formula,
                         rec.smiles,
                         rec.pathway,
@@ -90,7 +106,7 @@ class AdductRepository:
             rows = conn.execute(
                 """
                 SELECT adduct_id, source_name, adduct_name, precursor_mz, product_mz,
-                       neutral_loss, formula, smiles, pathway, evidence_level
+                       neutral_loss, expected_rt, isotope_ratio, formula, smiles, pathway, evidence_level
                 FROM adducts
                 ORDER BY adduct_name
                 LIMIT ?
@@ -106,7 +122,7 @@ class AdductRepository:
             rows = conn.execute(
                 """
                 SELECT adduct_id, source_name, adduct_name, precursor_mz, product_mz,
-                       neutral_loss, formula, smiles, pathway, evidence_level
+                       neutral_loss, expected_rt, isotope_ratio, formula, smiles, pathway, evidence_level
                 FROM adducts
                 WHERE precursor_mz BETWEEN ? AND ?
                 """,

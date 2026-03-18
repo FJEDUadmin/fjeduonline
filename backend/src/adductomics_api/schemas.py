@@ -10,6 +10,10 @@ class AdductRecord(BaseModel):
     precursor_mz: float = Field(..., gt=0)
     product_mz: float | None = Field(default=None, gt=0)
     neutral_loss: float | None = Field(default=None, gt=0)
+    expected_rt: float | None = Field(default=None, gt=0, description="Expected retention time in minutes")
+    isotope_ratio: float | None = Field(
+        default=None, ge=0, description="Expected isotope ratio proxy for matching"
+    )
     formula: str | None = None
     smiles: str | None = None
     pathway: str | None = Field(default=None, description="Canonical or inferred pathway")
@@ -23,6 +27,7 @@ class MRMTransition(BaseModel):
     product_mz: float = Field(..., gt=0)
     neutral_loss: float | None = Field(default=None, gt=0)
     retention_time: float | None = Field(default=None, gt=0)
+    isotope_ratio: float | None = Field(default=None, ge=0)
     intensity: float | None = Field(default=None, ge=0)
 
 
@@ -33,7 +38,10 @@ class CandidateAdduct(BaseModel):
     pathway: str | None = None
     ppm_error: float
     nl_error: float | None = None
+    rt_error: float | None = None
+    isotope_error: float | None = None
     confidence_score: float = Field(..., ge=0, le=1)
+    component_scores: dict[str, float] = Field(default_factory=dict)
     matched_by: list[str] = Field(default_factory=list)
 
 
@@ -56,10 +64,17 @@ class IngestHmdbRequest(BaseModel):
     ion_mode: Literal["neutral", "protonated"] = "protonated"
 
 
+class IngestMassBankRequest(BaseModel):
+    file_path: str = Field(..., description="Server-local MassBank export CSV path")
+    source_name: str = Field(default="massbank")
+
+
 class AnalyzeTransitionsRequest(BaseModel):
     transitions: list[MRMTransition]
     tolerance_ppm: float = Field(default=10.0, gt=0)
     neutral_loss_tolerance_da: float = Field(default=0.5, gt=0)
+    rt_tolerance_min: float = Field(default=0.5, gt=0)
+    isotope_tolerance: float = Field(default=0.15, gt=0)
     top_k_per_transition: int = Field(default=5, gt=0, le=50)
 
 
@@ -68,7 +83,25 @@ class AnalyzeCsvRequest(BaseModel):
     sample_id: str
     tolerance_ppm: float = Field(default=10.0, gt=0)
     neutral_loss_tolerance_da: float = Field(default=0.5, gt=0)
+    rt_tolerance_min: float = Field(default=0.5, gt=0)
+    isotope_tolerance: float = Field(default=0.15, gt=0)
     top_k_per_transition: int = Field(default=5, gt=0, le=50)
+
+
+class AnalysisParameters(BaseModel):
+    tolerance_ppm: float
+    neutral_loss_tolerance_da: float
+    rt_tolerance_min: float
+    isotope_tolerance: float
+    top_k_per_transition: int
+    scoring_version: str
+
+
+class AnalysisMetadata(BaseModel):
+    run_id: str
+    generated_at: str
+    software_version: str
+    parameters: AnalysisParameters
 
 
 class AnalysisResponse(BaseModel):
@@ -76,3 +109,4 @@ class AnalysisResponse(BaseModel):
     transitions_analyzed: int
     candidates: list[CandidateAdduct]
     pathway_scores: list[PathwayScore]
+    metadata: AnalysisMetadata
