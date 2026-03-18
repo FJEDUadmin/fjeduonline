@@ -22,6 +22,8 @@ class TrainResult:
     auc: float
     n_train_pairs: int
     n_test_pairs: int
+    test_scores: np.ndarray
+    test_labels: np.ndarray
 
 
 class ComparisonModel:
@@ -100,4 +102,6 @@ def donor_wise_train_eval(
         auc=float(auc),
         n_train_pairs=int(len(train_X)),
         n_test_pairs=int(len(test_X)),
+        test_scores=scores,
+        test_labels=test_y.to_numpy(),
     )
