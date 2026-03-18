@@ -1,0 +1,12 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: adductomics-api
+    env_file:
+      - .env.example
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "8000:8000"
