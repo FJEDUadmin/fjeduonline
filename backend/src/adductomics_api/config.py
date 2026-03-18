@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     app_name: str = "DNA Adductomics Platform API"
     app_version: str = "0.1.0"
     sqlite_path: str = "adductomics.db"
+    upload_dir: str = "data/uploads"
     default_tolerance_ppm: float = 10.0
     default_nl_tolerance_da: float = 0.5
     max_candidates_per_transition: int = 10

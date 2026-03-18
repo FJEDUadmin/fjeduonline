@@ -5,10 +5,12 @@
 目前版本提供：
 
 - DNA adduct 資料庫統一 schema（可匯入多來源資料）
+- HMDB CSV connector（第一個正式 databank adapter）
 - LC-MS MRM / Neutral Loss (NL) 分析流程
 - Adduct 候選識別與信心分數排序
 - 初版 pathway enrichment 分析
 - FastAPI 服務介面與測試
+- Web dashboard（檔案上傳 + 分析結果可視化）
 
 ---
 
@@ -35,6 +37,7 @@ backend/
     config.py               # runtime settings
     schemas.py              # pydantic schemas
     repository.py           # sqlite repository
+    static/                 # dashboard UI (HTML/CSS/JS)
     services/
       connectors.py         # data-bank connector abstraction
       identifier.py         # adduct candidate scoring
@@ -83,6 +86,10 @@ docker compose up --build
 3. 取得候選 adduct 與 pathway enrichment
 
 詳細 API payload 請看 `/docs` 自動文件。
+
+Dashboard：
+
+- `http://127.0.0.1:8000/`
 
 ---
 

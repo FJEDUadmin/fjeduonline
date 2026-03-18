@@ -50,6 +50,12 @@ class IngestCsvRequest(BaseModel):
     source_name: str = Field(default="custom_csv")
 
 
+class IngestHmdbRequest(BaseModel):
+    file_path: str = Field(..., description="Server-local HMDB export CSV path")
+    source_name: str = Field(default="hmdb")
+    ion_mode: Literal["neutral", "protonated"] = "protonated"
+
+
 class AnalyzeTransitionsRequest(BaseModel):
     transitions: list[MRMTransition]
     tolerance_ppm: float = Field(default=10.0, gt=0)

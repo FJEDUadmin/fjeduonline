@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DNA Adductomics Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>DNA Adductomics Platform</h1>
+      <p>Upload databanks, run MRM/NL analysis, inspect candidate adducts and pathways.</p>
+    </header>
+
+    <main class="grid">
+      <section class="card">
+        <h2>1) Ingest Generic Adduct CSV</h2>
+        <form id="ingestGenericForm">
+          <label>
+            Source Name
+            <input type="text" name="source_name" value="custom_upload" required />
+          </label>
+          <label>
+            CSV File
+            <input type="file" name="file" accept=".csv" required />
+          </label>
+          <button type="submit">Ingest Generic CSV</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>2) Ingest HMDB CSV</h2>
+        <form id="ingestHmdbForm">
+          <label>
+            Source Name
+            <input type="text" name="source_name" value="hmdb" required />
+          </label>
+          <label>
+            Ion Mode
+            <select name="ion_mode">
+              <option value="protonated" selected>Protonated [M+H]+</option>
+              <option value="neutral">Neutral Mass</option>
+            </select>
+          </label>
+          <label>
+            HMDB CSV
+            <input type="file" name="file" accept=".csv" required />
+          </label>
+          <button type="submit">Ingest HMDB CSV</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>3) Analyze MRM/NL CSV</h2>
+        <form id="analyzeForm">
+          <label>
+            Sample ID
+            <input type="text" name="sample_id" value="Sample_001" required />
+          </label>
+          <div class="row">
+            <label>
+              Tolerance (ppm)
+              <input type="number" step="0.1" min="0.1" name="tolerance_ppm" value="10" />
+            </label>
+            <label>
+              NL Tolerance (Da)
+              <input type="number" step="0.01" min="0.01" name="neutral_loss_tolerance_da" value="0.5" />
+            </label>
+            <label>
+              Top-K
+              <input type="number" min="1" max="50" name="top_k_per_transition" value="5" />
+            </label>
+          </div>
+          <label>
+            MRM/NL CSV
+            <input type="file" name="file" accept=".csv" required />
+          </label>
+          <button type="submit">Run Analysis</button>
+        </form>
+      </section>
+
+      <section class="card full-width">
+        <h2>Results</h2>
+        <pre id="statusBox" class="status">Ready.</pre>
+
+        <h3>Candidates</h3>
+        <div class="table-wrap">
+          <table id="candidatesTable">
+            <thead>
+              <tr>
+                <th>Adduct ID</th>
+                <th>Name</th>
+                <th>Source</th>
+                <th>Pathway</th>
+                <th>PPM Error</th>
+                <th>NL Error</th>
+                <th>Confidence</th>
+                <th>Matched By</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <h3>Pathway Enrichment</h3>
+        <div class="table-wrap">
+          <table id="pathwaysTable">
+            <thead>
+              <tr>
+                <th>Pathway</th>
+                <th>Hits</th>
+                <th>Population Size</th>
+                <th>Enrichment</th>
+                <th>P-value</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

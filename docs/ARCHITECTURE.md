@@ -12,6 +12,7 @@
 ### A) Ingestion Layer
 
 - Connector interface (CSV today, external databanks next)
+- HMDB CSV connector implemented as first formal databank adapter
 - Source normalization to canonical `AdductRecord`
 - Version-tagged ingestion pipeline
 
@@ -25,7 +26,9 @@
 ### C) Service Layer
 
 - REST API for ingestion and analysis
+- Upload-first endpoints for browser workflows
 - Structured request/response payloads for downstream visualization
+- Dashboard UI (static SPA) for no-code operation
 
 ### D) Persistence Layer
 

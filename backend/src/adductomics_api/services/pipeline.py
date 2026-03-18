@@ -9,7 +9,7 @@ from adductomics_api.schemas import (
     CandidateAdduct,
     MRMTransition,
 )
-from adductomics_api.services.connectors import CsvAdductConnector
+from adductomics_api.services.connectors import CsvAdductConnector, HmdbCsvConnector
 from adductomics_api.services.identifier import score_candidates
 from adductomics_api.services.pathway import score_pathways
 
@@ -20,6 +20,15 @@ class AnalysisPipeline:
 
     def ingest_adduct_csv(self, file_path: str, source_name: str) -> int:
         connector = CsvAdductConnector(file_path=file_path, source_name=source_name)
+        records = connector.load_records()
+        return self.repository.upsert_adducts(records)
+
+    def ingest_hmdb_csv(self, file_path: str, source_name: str, ion_mode: str = "protonated") -> int:
+        connector = HmdbCsvConnector(
+            file_path=file_path,
+            source_name=source_name,
+            ion_mode=ion_mode,
+        )
         records = connector.load_records()
         return self.repository.upsert_adducts(records)
 

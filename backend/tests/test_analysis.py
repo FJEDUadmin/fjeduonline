@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from adductomics_api.repository import AdductRepository
+from adductomics_api.services.connectors import PROTON_MASS
 from adductomics_api.services.pipeline import AnalysisPipeline
 
 
@@ -28,3 +29,25 @@ def test_pipeline_ingest_and_analyze(tmp_path: Path) -> None:
     assert len(result.candidates) >= 3
     assert result.candidates[0].confidence_score >= result.candidates[-1].confidence_score
     assert any(item.pathway == "Oxidative DNA Damage" for item in result.pathway_scores)
+
+
+def test_pipeline_hmdb_ingest(tmp_path: Path) -> None:
+    db_path = tmp_path / "test_hmdb.db"
+    repo = AdductRepository(str(db_path))
+    pipeline = AnalysisPipeline(repository=repo)
+
+    hmdb_csv = Path(__file__).resolve().parents[1] / "data" / "sample_hmdb_export.csv"
+    inserted = pipeline.ingest_hmdb_csv(
+        file_path=str(hmdb_csv),
+        source_name="hmdb_test",
+        ion_mode="protonated",
+    )
+    assert inserted == 3
+
+    adducts = repo.list_adducts(limit=10)
+    assert len(adducts) == 3
+    first = adducts[0]
+    assert first["source_name"] == "hmdb_test"
+    assert first["evidence_level"] == "predicted"
+    assert first["precursor_mz"] > 100
+    assert abs(first["precursor_mz"] - (149.0701 + PROTON_MASS)) < 0.01
