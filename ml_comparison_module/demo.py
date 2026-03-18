@@ -39,7 +39,9 @@ def make_synthetic_data(
                 }
                 for i, value in enumerate(values):
                     row[f"a{i:02d}"] = float(value)
-                    row[f"a{i:02d}_is"] = float(value * rng.uniform(0.8, 1.2))
+                    # IS channels should capture instrument/process variation,
+                    # not donor identity.
+                    row[f"a{i:02d}_is"] = float(np.exp(rng.normal(0.0, 0.15)))
 
                 rows.append(row)
                 sample_index += 1
