@@ -150,3 +150,105 @@ def test_upload_ingest_and_hmdb_endpoints() -> None:
     assert analyzed["transitions_analyzed"] == 3
     assert analyzed["metadata"]["parameters"]["scoring_version"] == SCORING_VERSION
     assert analyzed["metadata"]["parameters"]["rt_tolerance_min"] == 0.3
+
+
+def test_tool_upload_analysis_endpoint() -> None:
+    client = TestClient(app)
+    data_dir = Path(__file__).resolve().parents[1] / "data"
+
+    ingest_resp = client.post(
+        "/api/v1/ingest/adduct-bank/csv",
+        json={
+            "file_path": str(data_dir / "sample_adduct_bank.csv"),
+            "source_name": "tool_analysis_bank",
+        },
+    )
+    assert ingest_resp.status_code == 200
+
+    msdial_bytes = (data_dir / "sample_msdial_export.csv").read_bytes()
+    response = client.post(
+        "/api/v1/analyze/tool/upload-csv",
+        data={"tool": "msdial", "sample_id": "TOOL_S1"},
+        files={"file": ("sample_msdial_export.csv", BytesIO(msdial_bytes), "text/csv")},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["sample_id"] == "TOOL_S1"
+    assert payload["transitions_analyzed"] >= 1
+    assert payload["metadata"]["parameters"]["scoring_version"] == SCORING_VERSION
+    assert payload["candidates"][0]["confidence_level"] in {"Level 2A", "Level 2B", "Level 3", "Level 4"}
+
+
+def test_tool_file_path_analysis_endpoint() -> None:
+    client = TestClient(app)
+    data_dir = Path(__file__).resolve().parents[1] / "data"
+
+    ingest_resp = client.post(
+        "/api/v1/ingest/adduct-bank/csv",
+        json={
+            "file_path": str(data_dir / "sample_adduct_bank.csv"),
+            "source_name": "tool_file_bank",
+        },
+    )
+    assert ingest_resp.status_code == 200
+
+    response = client.post(
+        "/api/v1/analyze/tool-csv",
+        json={
+            "tool": "skyline",
+            "file_path": str(data_dir / "sample_skyline_export.csv"),
+            "sample_id": "TOOL_PATH_S1",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["sample_id"] == "TOOL_PATH_S1"
+    assert payload["transitions_analyzed"] == 2
+
+
+def test_r_module_health_endpoint() -> None:
+    client = TestClient(app)
+    response = client.get("/api/v1/stats/r-module/health")
+    assert response.status_code == 200
+    payload = response.json()
+    assert "rscript_available" in payload
+    assert "script_exists" in payload
+
+
+def test_r_statistics_endpoint_returns_payload_path() -> None:
+    client = TestClient(app)
+    request_payload = {
+        "sample_id": "R_S1",
+        "candidates": [
+            {
+                "adduct_id": "AD001",
+                "adduct_name": "8-oxo-dG",
+                "source_name": "test",
+                "pathway": "Oxidative DNA Damage",
+                "ppm_error": 1.2,
+                "nl_error": 0.01,
+                "rt_error": 0.02,
+                "isotope_error": 0.01,
+                "confidence_score": 0.91,
+                "confidence_level": "Level 2A",
+                "evidence_count": 5,
+                "component_scores": {"precursor_mz": 0.99},
+                "matched_by": ["precursor_mz", "product_mz", "neutral_loss", "retention_time", "isotope_ratio"],
+            }
+        ],
+        "pathway_scores": [
+            {
+                "pathway": "Oxidative DNA Damage",
+                "hits": 1,
+                "population_size": 2,
+                "enrichment_score": 1.23,
+                "p_value": 0.05,
+            }
+        ],
+        "report_title": "Test R Report",
+    }
+    response = client.post("/api/v1/stats/r-report", json=request_payload)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] in {"completed", "skipped", "failed"}
+    assert payload["output_path"] is not None

@@ -6,12 +6,14 @@
 
 - DNA adduct 資料庫統一 schema（可匯入多來源資料）
 - HMDB + MassBank CSV connector（已具備兩個正式 databank adapter）
+- MS-DIAL / MZmine / Skyline tool export parser hub
 - LC-MS MRM / Neutral Loss (NL) 分析流程
-- Adduct 候選識別與信心分數排序（scoring model v2，含 RT/isotope 可選特徵）
+- Adduct 候選識別與信心分數排序（scoring model v3，含 confidence level）
 - 初版 pathway enrichment 分析
 - FastAPI 服務介面與測試
 - Web dashboard（檔案上傳 + 分析結果可視化）
 - 分析 run metadata（run_id、參數、版本）可追溯
+- R 統計模組骨架（API 可觸發，輸出 report artifact）
 
 ---
 
@@ -86,6 +88,7 @@ docker compose up --build
 2. 提交 MRM/NL transition（JSON 或 CSV）
 3. 取得候選 adduct 與 pathway enrichment
 4. 保存/比對每次分析 metadata（參數與 scoring 版本）
+5. 透過 R module 產生統計摘要報告
 
 詳細 API payload 請看 `/docs` 自動文件。
 

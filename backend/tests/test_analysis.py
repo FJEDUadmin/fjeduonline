@@ -35,7 +35,10 @@ def test_pipeline_ingest_and_analyze(tmp_path: Path) -> None:
     assert result.metadata.parameters.scoring_version == SCORING_VERSION
     assert result.metadata.parameters.rt_tolerance_min == 0.3
     assert result.metadata.parameters.isotope_tolerance == 0.08
+    assert result.metadata.parameters.confidence_framework == "adductomics_lcms_confidence_v1"
     assert result.candidates[0].component_scores
+    assert result.candidates[0].confidence_level in {"Level 2A", "Level 2B", "Level 3", "Level 4"}
+    assert result.candidates[0].evidence_count >= 1
 
 
 def test_pipeline_hmdb_ingest(tmp_path: Path) -> None:
@@ -131,3 +134,25 @@ def test_pipeline_hmdb_non_utf8_cp1252_ingest(tmp_path: Path) -> None:
     adducts = repo.list_adducts(limit=5)
     assert len(adducts) == 1
     assert "Compound" in adducts[0]["adduct_name"]
+
+
+def test_pipeline_tool_parsers(tmp_path: Path) -> None:
+    db_path = tmp_path / "test_tool_parsers.db"
+    repo = AdductRepository(str(db_path))
+    pipeline = AnalysisPipeline(repository=repo)
+
+    adduct_csv = Path(__file__).resolve().parents[1] / "data" / "sample_adduct_bank.csv"
+    pipeline.ingest_adduct_csv(str(adduct_csv), source_name="sample_bank")
+
+    data_dir = Path(__file__).resolve().parents[1] / "data"
+    for tool, fname in [
+        ("msdial", "sample_msdial_export.csv"),
+        ("mzmine", "sample_mzmine_export.csv"),
+        ("skyline", "sample_skyline_export.csv"),
+    ]:
+        transitions = pipeline.parse_tool_export_csv(
+            tool=tool,  # type: ignore[arg-type]
+            file_path=str(data_dir / fname),
+            sample_id=f"{tool}_S1",
+        )
+        assert len(transitions) >= 2

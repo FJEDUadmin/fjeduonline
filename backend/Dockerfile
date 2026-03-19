@@ -8,6 +8,7 @@ COPY src /app/src
 RUN pip install --no-cache-dir -e .
 
 COPY data /app/data
+COPY r_modules /app/r_modules
 
 EXPOSE 8000
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
+import shutil
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile
@@ -13,14 +14,18 @@ from adductomics_api.repository import AdductRepository
 from adductomics_api.schemas import (
     AnalysisResponse,
     AnalyzeCsvRequest,
+    AnalyzeToolCsvRequest,
     AnalyzeTransitionsRequest,
     IngestCsvRequest,
     IngestHmdbRequest,
     IngestMassBankRequest,
+    RStatisticsRequest,
+    RStatisticsResponse,
 )
 from adductomics_api.services.pipeline import AnalysisPipeline
+from adductomics_api.services.r_stats import RStatisticsRunner
 
-app = FastAPI(title="DNA Adductomics Platform API", version="0.2.0")
+app = FastAPI(title="DNA Adductomics Platform API", version="0.3.0")
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 if STATIC_DIR.exists():
@@ -30,6 +35,14 @@ if STATIC_DIR.exists():
 def get_pipeline(settings: Settings = Depends(get_settings)) -> AnalysisPipeline:
     repo = AdductRepository(sqlite_path=settings.sqlite_path)
     return AnalysisPipeline(repository=repo, software_version=settings.app_version)
+
+
+def get_r_stats_runner(settings: Settings = Depends(get_settings)) -> RStatisticsRunner:
+    return RStatisticsRunner(
+        rscript_binary=settings.rscript_binary,
+        script_path=settings.r_module_script_path,
+        output_dir=settings.r_output_dir,
+    )
 
 
 def _ensure_upload_dir(settings: Settings) -> Path:
@@ -279,6 +292,95 @@ def analyze_mrm_nl_upload_csv(
         isotope_tolerance=isotope_tolerance,
         top_k_per_transition=top_k_per_transition,
     )
+
+
+@app.post("/api/v1/analyze/tool-csv", response_model=AnalysisResponse)
+def analyze_tool_csv(
+    payload: AnalyzeToolCsvRequest,
+    pipeline: AnalysisPipeline = Depends(get_pipeline),
+) -> AnalysisResponse:
+    try:
+        transitions = pipeline.parse_tool_export_csv(
+            tool=payload.tool,
+            file_path=payload.file_path,
+            sample_id=payload.sample_id,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except KeyError as exc:
+        raise HTTPException(status_code=400, detail=f"Tool CSV schema missing field: {exc}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid value in tool CSV: {exc}") from exc
+
+    return pipeline.analyze_transitions(
+        transitions=transitions,
+        tolerance_ppm=payload.tolerance_ppm,
+        neutral_loss_tolerance_da=payload.neutral_loss_tolerance_da,
+        rt_tolerance_min=payload.rt_tolerance_min,
+        isotope_tolerance=payload.isotope_tolerance,
+        top_k_per_transition=payload.top_k_per_transition,
+    )
+
+
+@app.post("/api/v1/analyze/tool/upload-csv", response_model=AnalysisResponse)
+def analyze_tool_upload_csv(
+    tool: str = Form(...),
+    sample_id: str = Form(...),
+    tolerance_ppm: float = Form(default=10.0),
+    neutral_loss_tolerance_da: float = Form(default=0.5),
+    rt_tolerance_min: float = Form(default=0.5),
+    isotope_tolerance: float = Form(default=0.15),
+    top_k_per_transition: int = Form(default=5),
+    file: UploadFile = File(...),
+    pipeline: AnalysisPipeline = Depends(get_pipeline),
+    settings: Settings = Depends(get_settings),
+) -> AnalysisResponse:
+    tool_name = tool.strip().lower()
+    upload_path = _save_upload(
+        file=file,
+        upload_dir=_ensure_upload_dir(settings),
+        prefix=f"{tool_name}_{sample_id}",
+    )
+    try:
+        transitions = pipeline.parse_tool_export_csv(
+            tool=tool_name,  # validated in parser entrypoint
+            file_path=upload_path,
+            sample_id=sample_id,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except KeyError as exc:
+        raise HTTPException(status_code=400, detail=f"Tool CSV schema missing field: {exc}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid value in tool CSV: {exc}") from exc
+
+    return pipeline.analyze_transitions(
+        transitions=transitions,
+        tolerance_ppm=tolerance_ppm,
+        neutral_loss_tolerance_da=neutral_loss_tolerance_da,
+        rt_tolerance_min=rt_tolerance_min,
+        isotope_tolerance=isotope_tolerance,
+        top_k_per_transition=top_k_per_transition,
+    )
+
+
+@app.get("/api/v1/stats/r-module/health")
+def r_module_health(settings: Settings = Depends(get_settings)) -> dict:
+    return {
+        "rscript_binary": settings.rscript_binary,
+        "rscript_available": shutil.which(settings.rscript_binary) is not None,
+        "script_path": settings.r_module_script_path,
+        "script_exists": Path(settings.r_module_script_path).exists(),
+        "output_dir": settings.r_output_dir,
+    }
+
+
+@app.post("/api/v1/stats/r-report", response_model=RStatisticsResponse)
+def run_r_statistics_report(
+    payload: RStatisticsRequest,
+    runner: RStatisticsRunner = Depends(get_r_stats_runner),
+) -> RStatisticsResponse:
+    return runner.run(payload)
 
 
 @app.get("/api/v1/adducts")

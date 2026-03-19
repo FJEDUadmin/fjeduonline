@@ -4,9 +4,13 @@ const ingestGenericForm = document.getElementById("ingestGenericForm");
 const ingestHmdbForm = document.getElementById("ingestHmdbForm");
 const ingestMassBankForm = document.getElementById("ingestMassBankForm");
 const analyzeForm = document.getElementById("analyzeForm");
+const analyzeToolForm = document.getElementById("analyzeToolForm");
+const runRReportForm = document.getElementById("runRReportForm");
+const rBox = document.getElementById("rBox");
 
 const candidatesBody = document.querySelector("#candidatesTable tbody");
 const pathwaysBody = document.querySelector("#pathwaysTable tbody");
+let latestAnalysisResult = null;
 
 function setStatus(message, isError = false) {
   statusBox.textContent = message;
@@ -16,7 +20,7 @@ function setStatus(message, isError = false) {
 function renderCandidates(candidates) {
   candidatesBody.innerHTML = "";
   if (!Array.isArray(candidates) || candidates.length === 0) {
-    candidatesBody.innerHTML = "<tr><td colspan='11'>No candidates found.</td></tr>";
+    candidatesBody.innerHTML = "<tr><td colspan='13'>No candidates found.</td></tr>";
     return;
   }
 
@@ -32,6 +36,8 @@ function renderCandidates(candidates) {
       <td>${item.rt_error == null ? "" : Number(item.rt_error).toFixed(3)}</td>
       <td>${item.isotope_error == null ? "" : Number(item.isotope_error).toFixed(4)}</td>
       <td>${Number(item.confidence_score).toFixed(4)}</td>
+      <td>${item.confidence_level ?? ""}</td>
+      <td>${item.evidence_count ?? ""}</td>
       <td>${item.component_scores ? JSON.stringify(item.component_scores) : ""}</td>
       <td>${Array.isArray(item.matched_by) ? item.matched_by.join(", ") : ""}</td>
     `;
@@ -74,6 +80,18 @@ function renderPathways(pathways) {
     `;
     pathwaysBody.appendChild(tr);
   }
+}
+
+function renderRStatus(payload) {
+  if (!payload) {
+    rBox.textContent = "R statistics status unavailable.";
+    return;
+  }
+  rBox.textContent =
+    `Status: ${payload.status}\n` +
+    `Message: ${payload.message}\n` +
+    `Output: ${payload.output_path ?? "N/A"}\n` +
+    `Script: ${payload.script_path ?? "N/A"}`;
 }
 
 async function postForm(endpoint, formData) {
@@ -136,10 +154,64 @@ analyzeForm.addEventListener("submit", async (event) => {
     setStatus(
       `Analysis complete.\nSample: ${result.sample_id}\nTransitions: ${result.transitions_analyzed}\nCandidates: ${result.candidates.length}`
     );
+    latestAnalysisResult = result;
     renderMetadata(result.metadata);
     renderCandidates(result.candidates);
     renderPathways(result.pathway_scores);
   } catch (error) {
     setStatus(`Analysis failed: ${error.message}`, true);
+  }
+});
+
+analyzeToolForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    setStatus("Running tool-export analysis...");
+    const formData = new FormData(analyzeToolForm);
+    formData.set("tolerance_ppm", "10");
+    formData.set("neutral_loss_tolerance_da", "0.5");
+    formData.set("rt_tolerance_min", "0.5");
+    formData.set("isotope_tolerance", "0.15");
+    formData.set("top_k_per_transition", "5");
+    const result = await postForm("/api/v1/analyze/tool/upload-csv", formData);
+    setStatus(
+      `Tool-based analysis complete.\nSample: ${result.sample_id}\nTransitions: ${result.transitions_analyzed}\nCandidates: ${result.candidates.length}`
+    );
+    latestAnalysisResult = result;
+    renderMetadata(result.metadata);
+    renderCandidates(result.candidates);
+    renderPathways(result.pathway_scores);
+  } catch (error) {
+    setStatus(`Tool analysis failed: ${error.message}`, true);
+  }
+});
+
+runRReportForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!latestAnalysisResult) {
+    setStatus("Run an analysis first before generating R report.", true);
+    return;
+  }
+  try {
+    setStatus("Generating R statistics report...");
+    const reportTitle = new FormData(runRReportForm).get("report_title");
+    const response = await fetch("/api/v1/stats/r-report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sample_id: latestAnalysisResult.sample_id,
+        candidates: latestAnalysisResult.candidates,
+        pathway_scores: latestAnalysisResult.pathway_scores,
+        report_title: reportTitle,
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.detail || "R report request failed");
+    }
+    renderRStatus(payload);
+    setStatus("R statistics request processed.");
+  } catch (error) {
+    setStatus(`R statistics failed: ${error.message}`, true);
   }
 });

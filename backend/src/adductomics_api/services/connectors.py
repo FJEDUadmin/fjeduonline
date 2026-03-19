@@ -1,67 +1,12 @@
 from __future__ import annotations
 
-import csv
-import io
 from pathlib import Path
 from typing import Protocol
 
 from adductomics_api.schemas import AdductRecord
+from adductomics_api.services.csv_utils import get_first, prepare_row, read_csv_rows_with_fallback
 
 PROTON_MASS = 1.007276466812
-CSV_ENCODING_CANDIDATES = [
-    "utf-8",
-    "utf-8-sig",
-    "big5",
-    "cp950",
-    "cp1252",
-    "gb18030",
-    "latin-1",
-]
-
-
-def _normalize_key(key: str) -> str:
-    normalized = "".join(ch if ch.isalnum() else "_" for ch in key.strip().lower())
-    while "__" in normalized:
-        normalized = normalized.replace("__", "_")
-    return normalized.strip("_")
-
-
-def _prepare_row(row: dict[str, str | None]) -> dict[str, str]:
-    prepared: dict[str, str] = {}
-    for raw_key, raw_value in row.items():
-        if raw_key is None:
-            continue
-        normalized_key = _normalize_key(str(raw_key))
-        if normalized_key in prepared:
-            continue
-        value = "" if raw_value is None else str(raw_value).strip()
-        prepared[normalized_key] = value
-    return prepared
-
-
-def _get_first(prepared_row: dict[str, str], keys: list[str]) -> str | None:
-    for key in keys:
-        value = prepared_row.get(_normalize_key(key))
-        if value:
-            return value
-    return None
-
-
-def _read_csv_rows_with_fallback(csv_path: Path) -> list[dict[str, str | None]]:
-    raw = csv_path.read_bytes()
-    decode_errors: list[str] = []
-    for encoding in CSV_ENCODING_CANDIDATES:
-        try:
-            text = raw.decode(encoding)
-            reader = csv.DictReader(io.StringIO(text))
-            return list(reader)
-        except UnicodeDecodeError as exc:
-            decode_errors.append(f"{encoding}: {exc}")
-
-    raise ValueError(
-        "Unable to decode CSV file with supported encodings "
-        f"{CSV_ENCODING_CANDIDATES}. Decode errors: {decode_errors}"
-    )
 
 
 class AdductBankConnector(Protocol):
@@ -91,7 +36,7 @@ class CsvAdductConnector:
             raise FileNotFoundError(f"Adduct CSV not found: {self.file_path}")
 
         records: list[AdductRecord] = []
-        for row in _read_csv_rows_with_fallback(csv_path):
+        for row in read_csv_rows_with_fallback(csv_path):
             rec = AdductRecord(
                 adduct_id=row["adduct_id"],
                 source_name=self.source_name,
@@ -148,10 +93,10 @@ class HmdbCsvConnector:
             raise FileNotFoundError(f"HMDB CSV not found: {self.file_path}")
 
         records: list[AdductRecord] = []
-        for idx, row in enumerate(_read_csv_rows_with_fallback(csv_path), start=1):
-            prepared_row = _prepare_row(row)
-            hmdb_id = _get_first(prepared_row, ["accession", "hmdb_id", "accession_id"]) or f"HMDB_AUTO_{idx}"
-            name = _get_first(
+        for idx, row in enumerate(read_csv_rows_with_fallback(csv_path), start=1):
+            prepared_row = prepare_row(row)
+            hmdb_id = get_first(prepared_row, ["accession", "hmdb_id", "accession_id"]) or f"HMDB_AUTO_{idx}"
+            name = get_first(
                 prepared_row,
                 [
                     "name",
@@ -165,7 +110,7 @@ class HmdbCsvConnector:
             if name is None:
                 raise KeyError("name")
 
-            raw_mass = _get_first(
+            raw_mass = get_first(
                 prepared_row,
                 [
                     "monoisotopic_molecular_weight",
@@ -180,10 +125,10 @@ class HmdbCsvConnector:
 
             neutral_mass = float(raw_mass)
             precursor_mz = neutral_mass if self.ion_mode == "neutral" else neutral_mass + PROTON_MASS
-            hmdb_isotope = _get_first(
+            hmdb_isotope = get_first(
                 prepared_row, ["isotope_ratio", "isotope_pattern_ratio", "isotope"]
             )
-            hmdb_rt = _get_first(prepared_row, ["retention_time", "rt"])
+            hmdb_rt = get_first(prepared_row, ["retention_time", "rt"])
 
             records.append(
                 AdductRecord(
@@ -195,10 +140,10 @@ class HmdbCsvConnector:
                     neutral_loss=None,
                     expected_rt=float(hmdb_rt) if hmdb_rt is not None else None,
                     isotope_ratio=float(hmdb_isotope) if hmdb_isotope is not None else None,
-                    formula=_get_first(prepared_row, ["chemical_formula", "formula", "molecular_formula"]),
-                    smiles=_get_first(prepared_row, ["smiles", "smiles_string"]),
+                    formula=get_first(prepared_row, ["chemical_formula", "formula", "molecular_formula"]),
+                    smiles=get_first(prepared_row, ["smiles", "smiles_string"]),
                     pathway=self._normalize_pathway(
-                        _get_first(
+                        get_first(
                             prepared_row,
                             ["pathways", "pathway", "kegg_pathway", "smpdb_pathway", "biocyc_pathway"],
                         )
@@ -247,26 +192,26 @@ class MassBankCsvConnector:
             raise FileNotFoundError(f"MassBank CSV not found: {self.file_path}")
 
         records: list[AdductRecord] = []
-        for idx, row in enumerate(_read_csv_rows_with_fallback(csv_path), start=1):
-            prepared_row = _prepare_row(row)
+        for idx, row in enumerate(read_csv_rows_with_fallback(csv_path), start=1):
+            prepared_row = prepare_row(row)
             massbank_id = (
-                _get_first(prepared_row, ["accession", "record_id", "mb_id", "massbank_id"])
+                get_first(prepared_row, ["accession", "record_id", "mb_id", "massbank_id"])
                 or f"MB_AUTO_{idx}"
             )
-            name = _get_first(prepared_row, ["compound_name", "name", "chemical_name", "common_name"])
+            name = get_first(prepared_row, ["compound_name", "name", "chemical_name", "common_name"])
             if name is None:
                 raise KeyError("compound_name")
 
-            raw_precursor_mz = _get_first(prepared_row, ["precursor_mz", "mz", "exact_mass", "mass"])
+            raw_precursor_mz = get_first(prepared_row, ["precursor_mz", "mz", "exact_mass", "mass"])
             if raw_precursor_mz is None:
                 raise KeyError("precursor_mz")
 
             precursor_mz = float(raw_precursor_mz)
-            raw_product_mz = _get_first(prepared_row, ["product_mz", "fragment_mz"])
+            raw_product_mz = get_first(prepared_row, ["product_mz", "fragment_mz"])
             product_mz = float(raw_product_mz) if raw_product_mz else None
             neutral_loss = precursor_mz - product_mz if product_mz else None
-            raw_rt = _get_first(prepared_row, ["retention_time", "rt"])
-            raw_isotope = _get_first(prepared_row, ["isotope_ratio", "isotope_pattern_ratio", "isotope"])
+            raw_rt = get_first(prepared_row, ["retention_time", "rt"])
+            raw_isotope = get_first(prepared_row, ["isotope_ratio", "isotope_pattern_ratio", "isotope"])
 
             records.append(
                 AdductRecord(
@@ -278,10 +223,10 @@ class MassBankCsvConnector:
                     neutral_loss=neutral_loss if neutral_loss and neutral_loss > 0 else None,
                     expected_rt=(float(raw_rt) if raw_rt else None),
                     isotope_ratio=(float(raw_isotope) if raw_isotope else None),
-                    formula=_get_first(prepared_row, ["formula", "molecular_formula"]),
-                    smiles=_get_first(prepared_row, ["smiles", "smiles_string"]),
+                    formula=get_first(prepared_row, ["formula", "molecular_formula"]),
+                    smiles=get_first(prepared_row, ["smiles", "smiles_string"]),
                     pathway=self._normalize_pathway(
-                        _get_first(prepared_row, ["pathway", "pathways", "class", "kegg_pathway"])
+                        get_first(prepared_row, ["pathway", "pathways", "class", "kegg_pathway"])
                     ),
                     evidence_level="reported",
                 )

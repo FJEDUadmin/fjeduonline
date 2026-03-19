@@ -102,10 +102,45 @@
         </form>
       </section>
 
+      <section class="card">
+        <h2>5) Analyze Tool Export CSV</h2>
+        <form id="analyzeToolForm">
+          <label>
+            Tool
+            <select name="tool">
+              <option value="msdial">MS-DIAL</option>
+              <option value="mzmine">MZmine</option>
+              <option value="skyline">Skyline</option>
+            </select>
+          </label>
+          <label>
+            Sample ID
+            <input type="text" name="sample_id" value="ToolSample_001" required />
+          </label>
+          <label>
+            Tool Export CSV
+            <input type="file" name="file" accept=".csv" required />
+          </label>
+          <button type="submit">Run Tool-based Analysis</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>6) Run R Statistics Report</h2>
+        <form id="runRReportForm">
+          <label>
+            Report Title
+            <input type="text" name="report_title" value="DNA Adductomics Statistical Summary" />
+          </label>
+          <button type="submit">Generate R Report from Latest Analysis</button>
+        </form>
+      </section>
+
       <section class="card full-width">
         <h2>Results</h2>
         <pre id="statusBox" class="status">Ready.</pre>
         <pre id="metaBox" class="status">Run metadata will appear here.</pre>
+        <pre id="rBox" class="status">R statistics status will appear here.</pre>
 
         <h3>Candidates</h3>
         <div class="table-wrap">
@@ -121,6 +156,8 @@
                 <th>RT Error</th>
                 <th>Isotope Error</th>
                 <th>Confidence</th>
+                <th>Level</th>
+                <th>Evidence Count</th>
                 <th>Component Scores</th>
                 <th>Matched By</th>
               </tr>

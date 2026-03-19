@@ -5,11 +5,13 @@ FastAPI backend for:
 - adduct bank ingestion
 - HMDB CSV connector ingestion
 - MassBank CSV connector ingestion
+- tool export parser hub (MS-DIAL, MZmine, Skyline)
 - LC-MS MRM/NL transition analysis
-- candidate adduct identification
-- pathway enrichment scoring with confidence model v2
+- candidate adduct identification (confidence v3 levels)
+- pathway enrichment scoring with confidence model v3
 - browser dashboard for upload/analysis workflows
 - run-level provenance metadata (`run_id`, parameters, scoring version)
+- R statistics module trigger and report artifact generation
 
 Run locally:
 
@@ -25,6 +27,13 @@ Open:
 - API docs: `http://127.0.0.1:8000/docs`
 - Dashboard: `http://127.0.0.1:8000/`
 
+Phase A endpoints:
+
+- `POST /api/v1/analyze/tool-csv`
+- `POST /api/v1/analyze/tool/upload-csv`
+- `GET /api/v1/stats/r-module/health`
+- `POST /api/v1/stats/r-report`
+
 HMDB CSV expected column aliases:
 
 - `accession`, `hmdb_id`, or `accession_id`
@@ -36,6 +45,12 @@ Notes:
 - Header matching is case-insensitive.
 - Spaces/hyphens/dots in header names are tolerated.
 - CSV encoding fallback is automatic (UTF-8, UTF-8-SIG, Big5/CP950, CP1252, GB18030, Latin-1).
+
+Tool export support:
+
+- MS-DIAL alignment table exports
+- MZmine feature table exports
+- Skyline transition report exports
 
 MassBank CSV expected column aliases:
 

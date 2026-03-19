@@ -41,6 +41,8 @@ class CandidateAdduct(BaseModel):
     rt_error: float | None = None
     isotope_error: float | None = None
     confidence_score: float = Field(..., ge=0, le=1)
+    confidence_level: Literal["Level 2A", "Level 2B", "Level 3", "Level 4"]
+    evidence_count: int = Field(..., ge=1)
     component_scores: dict[str, float] = Field(default_factory=dict)
     matched_by: list[str] = Field(default_factory=list)
 
@@ -69,6 +71,17 @@ class IngestMassBankRequest(BaseModel):
     source_name: str = Field(default="massbank")
 
 
+class AnalyzeToolCsvRequest(BaseModel):
+    tool: Literal["msdial", "mzmine", "skyline"]
+    file_path: str = Field(..., description="Server-local CSV path exported by the selected tool")
+    sample_id: str
+    tolerance_ppm: float = Field(default=10.0, gt=0)
+    neutral_loss_tolerance_da: float = Field(default=0.5, gt=0)
+    rt_tolerance_min: float = Field(default=0.5, gt=0)
+    isotope_tolerance: float = Field(default=0.15, gt=0)
+    top_k_per_transition: int = Field(default=5, gt=0, le=50)
+
+
 class AnalyzeTransitionsRequest(BaseModel):
     transitions: list[MRMTransition]
     tolerance_ppm: float = Field(default=10.0, gt=0)
@@ -95,6 +108,7 @@ class AnalysisParameters(BaseModel):
     isotope_tolerance: float
     top_k_per_transition: int
     scoring_version: str
+    confidence_framework: str
 
 
 class AnalysisMetadata(BaseModel):
@@ -110,3 +124,17 @@ class AnalysisResponse(BaseModel):
     candidates: list[CandidateAdduct]
     pathway_scores: list[PathwayScore]
     metadata: AnalysisMetadata
+
+
+class RStatisticsRequest(BaseModel):
+    sample_id: str
+    candidates: list[CandidateAdduct]
+    pathway_scores: list[PathwayScore]
+    report_title: str = "DNA Adductomics Statistical Summary"
+
+
+class RStatisticsResponse(BaseModel):
+    status: Literal["completed", "skipped", "failed"]
+    message: str
+    output_path: str | None = None
+    script_path: str | None = None

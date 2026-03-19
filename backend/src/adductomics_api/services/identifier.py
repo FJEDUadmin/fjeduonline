@@ -4,7 +4,8 @@ from dataclasses import dataclass
 
 from adductomics_api.schemas import CandidateAdduct, MRMTransition
 
-SCORING_VERSION = "v2.0"
+SCORING_VERSION = "v3.0"
+CONFIDENCE_FRAMEWORK = "adductomics_lcms_confidence_v1"
 
 
 @dataclass(frozen=True)
@@ -45,6 +46,19 @@ def _weighted_average(component_scores: dict[str, float], weights: ScoringWeight
     if weight_sum <= 0:
         return 0.0
     return sum(available[k] * (weights_map[k] / weight_sum) for k in available.keys())
+
+
+def _confidence_level(confidence: float, matched_by: list[str]) -> str:
+    evidence_set = set(matched_by)
+    has_structural = "product_mz" in evidence_set or "neutral_loss" in evidence_set
+    has_orthogonal = "retention_time" in evidence_set or "isotope_ratio" in evidence_set
+    if confidence >= 0.85 and has_structural and has_orthogonal:
+        return "Level 2A"
+    if confidence >= 0.70 and has_structural:
+        return "Level 2B"
+    if confidence >= 0.50:
+        return "Level 3"
+    return "Level 4"
 
 
 def score_candidates(
@@ -92,6 +106,7 @@ def score_candidates(
             matched_by.append("isotope_ratio")
 
         confidence = _weighted_average(component_scores=component_scores, weights=score_weights)
+        confidence_level = _confidence_level(confidence=confidence, matched_by=matched_by)
         candidate = CandidateAdduct(
             adduct_id=row["adduct_id"],
             adduct_name=row["adduct_name"],
@@ -102,6 +117,8 @@ def score_candidates(
             rt_error=rt_error,
             isotope_error=isotope_error,
             confidence_score=round(confidence, 5),
+            confidence_level=confidence_level,  # publication-facing evidence grade
+            evidence_count=len(matched_by),
             component_scores={k: round(v, 5) for k, v in component_scores.items()},
             matched_by=matched_by,
         )

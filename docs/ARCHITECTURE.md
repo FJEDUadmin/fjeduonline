@@ -13,6 +13,7 @@
 
 - Connector interface (CSV today, external databanks next)
 - HMDB and MassBank CSV connectors implemented as formal databank adapters
+- Tool parser hub for MS-DIAL, MZmine, and Skyline exports
 - Source normalization to canonical `AdductRecord`
 - Version-tagged ingestion pipeline
 
@@ -20,9 +21,10 @@
 
 - Transition parsing (MRM + neutral loss)
 - Candidate retrieval by m/z and optional neutral loss constraints
-- Multi-factor confidence scoring (v2: precursor/product/NL/RT/isotope)
+- Multi-factor confidence scoring (v3: precursor/product/NL/RT/isotope + confidence levels)
 - Pathway enrichment from matched candidates
 - Run provenance metadata for reproducibility
+- R statistics runner interface with report artifact output
 
 ### C) Service Layer
 

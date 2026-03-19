@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import csv
 from pathlib import Path
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -14,12 +12,14 @@ from adductomics_api.schemas import (
     MRMTransition,
 )
 from adductomics_api.services.connectors import CsvAdductConnector, HmdbCsvConnector, MassBankCsvConnector
-from adductomics_api.services.identifier import SCORING_VERSION, score_candidates
+from adductomics_api.services.csv_utils import get_first, prepare_row, read_csv_rows_with_fallback
+from adductomics_api.services.identifier import CONFIDENCE_FRAMEWORK, SCORING_VERSION, score_candidates
 from adductomics_api.services.pathway import score_pathways
+from adductomics_api.services.tool_parsers import ToolParserType, parse_tool_csv
 
 
 class AnalysisPipeline:
-    def __init__(self, repository: AdductRepository, software_version: str = "0.1.0") -> None:
+    def __init__(self, repository: AdductRepository, software_version: str = "0.3.0") -> None:
         self.repository = repository
         self.software_version = software_version
 
@@ -48,31 +48,46 @@ class AnalysisPipeline:
             raise FileNotFoundError(f"Transition CSV not found: {file_path}")
 
         transitions: list[MRMTransition] = []
-        with csv_path.open("r", encoding="utf-8") as fp:
-            reader = csv.DictReader(fp)
-            for idx, row in enumerate(reader, start=1):
-                precursor_mz = float(row["precursor_mz"])
-                product_mz = float(row["product_mz"])
-                neutral_loss = (
-                    float(row["neutral_loss"])
-                    if row.get("neutral_loss")
-                    else (precursor_mz - product_mz if precursor_mz > product_mz else None)
+        for idx, raw_row in enumerate(read_csv_rows_with_fallback(csv_path), start=1):
+            row = prepare_row(raw_row)
+            precursor_raw = get_first(row, ["precursor_mz", "precursor_m_z", "mz", "q1"])
+            product_raw = get_first(row, ["product_mz", "product_m_z", "fragment_mz", "q3"])
+            if precursor_raw is None:
+                raise KeyError("precursor_mz")
+            precursor_mz = float(precursor_raw)
+            if product_raw is None:
+                raise KeyError("product_mz")
+            product_mz = float(product_raw)
+            neutral_loss_raw = get_first(row, ["neutral_loss", "nl"])
+            neutral_loss = (
+                float(neutral_loss_raw)
+                if neutral_loss_raw
+                else (precursor_mz - product_mz if precursor_mz > product_mz else None)
+            )
+            rt_raw = get_first(row, ["retention_time", "rt"])
+            isotope_raw = get_first(row, ["isotope_ratio"])
+            intensity_raw = get_first(row, ["intensity", "area", "height"])
+            transitions.append(
+                MRMTransition(
+                    transition_id=get_first(row, ["transition_id", "id", "transition_name"]) or f"{sample_id}_T{idx}",
+                    sample_id=sample_id,
+                    precursor_mz=precursor_mz,
+                    product_mz=product_mz,
+                    neutral_loss=neutral_loss,
+                    retention_time=float(rt_raw) if rt_raw else None,
+                    isotope_ratio=float(isotope_raw) if isotope_raw else None,
+                    intensity=float(intensity_raw) if intensity_raw else None,
                 )
-                transitions.append(
-                    MRMTransition(
-                        transition_id=row.get("transition_id") or f"{sample_id}_T{idx}",
-                        sample_id=sample_id,
-                        precursor_mz=precursor_mz,
-                        product_mz=product_mz,
-                        neutral_loss=neutral_loss,
-                        retention_time=(
-                            float(row["retention_time"]) if row.get("retention_time") else None
-                        ),
-                        isotope_ratio=float(row["isotope_ratio"]) if row.get("isotope_ratio") else None,
-                        intensity=float(row["intensity"]) if row.get("intensity") else None,
-                    )
-                )
+            )
         return transitions
+
+    def parse_tool_export_csv(
+        self,
+        tool: ToolParserType,
+        file_path: str,
+        sample_id: str,
+    ) -> list[MRMTransition]:
+        return parse_tool_csv(tool=tool, file_path=file_path, sample_id=sample_id)
 
     def analyze_transitions(
         self,
@@ -125,6 +140,7 @@ class AnalysisPipeline:
                 isotope_tolerance=isotope_tolerance,
                 top_k_per_transition=top_k_per_transition,
                 scoring_version=SCORING_VERSION,
+                confidence_framework=CONFIDENCE_FRAMEWORK,
             ),
         )
         return AnalysisResponse(
