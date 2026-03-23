@@ -9,10 +9,21 @@
   <body>
     <header>
       <h1>DNA Adductomics Platform</h1>
-      <p>Upload databanks, run MRM/NL analysis, inspect candidate adducts and pathways.</p>
+      <p>Web-ready platform for databank integration, MRM/NL identification, and pathway interpretation.</p>
     </header>
 
     <main class="grid">
+      <section class="card">
+        <h2>0) Quick Demo (One Click)</h2>
+        <form id="demoForm">
+          <label>
+            Sample ID
+            <input type="text" name="sample_id" value="DEMO_SAMPLE_001" required />
+          </label>
+          <button type="submit">Run Demo with Built-in Data</button>
+        </form>
+      </section>
+
       <section class="card">
         <h2>1) Ingest Generic Adduct CSV</h2>
         <form id="ingestGenericForm">

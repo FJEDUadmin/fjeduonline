@@ -32,11 +32,13 @@
 - Upload-first endpoints for browser workflows
 - Structured request/response payloads for downstream visualization
 - Dashboard UI (static SPA) for no-code operation
+- One-click demo execution endpoint for web onboarding
 
 ### D) Persistence Layer
 
 - SQLite baseline for local development
 - Schema designed to migrate to PostgreSQL in production
+- Production deployment path includes reverse proxy and HTTPS termination
 
 ## Planned Scale-up Path
 

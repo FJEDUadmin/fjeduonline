@@ -33,6 +33,16 @@ def test_dashboard_endpoint() -> None:
     assert "DNA Adductomics Platform" in response.text
 
 
+def test_demo_run_endpoint() -> None:
+    client = TestClient(app)
+    response = client.post("/api/v1/demo/run", data={"sample_id": "DEMO_API_S1"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["sample_id"] == "DEMO_API_S1"
+    assert payload["transitions_analyzed"] == 3
+    assert len(payload["candidates"]) >= 1
+
+
 def test_ingest_and_analyze_endpoints() -> None:
     client = TestClient(app)
     data_dir = Path(__file__).resolve().parents[1] / "data"

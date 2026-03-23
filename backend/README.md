@@ -29,6 +29,7 @@ Open:
 
 Phase A endpoints:
 
+- `POST /api/v1/demo/run`
 - `POST /api/v1/analyze/tool-csv`
 - `POST /api/v1/analyze/tool/upload-csv`
 - `GET /api/v1/stats/r-module/health`
@@ -58,3 +59,8 @@ MassBank CSV expected column aliases:
 - `compound_name` / `name`
 - `precursor_mz` (or `mz`, `exact_mass`)
 - optional: `product_mz`, `retention_time`, `isotope_ratio`, `formula`, `pathway`
+
+Production deployment:
+
+- `docker-compose.prod.yml` + `deploy/Caddyfile` for reverse proxy and HTTPS
+- copy `.env.prod.example` to `.env.prod` and set `DOMAIN` + `ACME_EMAIL`

@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     rscript_binary: str = "Rscript"
     r_module_script_path: str = "r_modules/adductomics_stats.R"
     r_output_dir: str = "data/r_reports"
+    demo_data_dir: str = "data"
 
     model_config = SettingsConfigDict(env_file=".env", env_prefix="ADDUCT_")
 

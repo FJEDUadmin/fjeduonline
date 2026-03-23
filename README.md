@@ -50,8 +50,12 @@ backend/
   data/
   Dockerfile
   docker-compose.yml
+  docker-compose.prod.yml
+  deploy/
+    Caddyfile             # HTTPS reverse proxy config
 docs/
   ARCHITECTURE.md
+  DEPLOYMENT_WEB_ZH.md
 ```
 
 ---
@@ -79,6 +83,17 @@ API 啟動後：
 cd backend
 docker compose up --build
 ```
+
+### Production 上線（網頁對外）
+
+```bash
+cd backend
+cp .env.prod.example .env.prod
+# 編輯 DOMAIN 與 ACME_EMAIL
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+```
+
+完整部署教學請看：`docs/DEPLOYMENT_WEB_ZH.md`
 
 ---
 

@@ -1,0 +1,36 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      ADDUCT_SQLITE_PATH: /app/data/adductomics.db
+      ADDUCT_UPLOAD_DIR: /app/data/uploads
+      ADDUCT_R_OUTPUT_DIR: /app/data/r_reports
+      ADDUCT_R_MODULE_SCRIPT_PATH: /app/r_modules/adductomics_stats.R
+      PORT: 8000
+      WEB_CONCURRENCY: 2
+    volumes:
+      - adduct_data:/app/data
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  adduct_data:
+  caddy_data:
+  caddy_config:

@@ -12,4 +12,4 @@ COPY r_modules /app/r_modules
 
 EXPOSE 8000
 
-CMD ["uvicorn", "adductomics_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "gunicorn -k uvicorn.workers.UvicornWorker -w ${WEB_CONCURRENCY:-2} -b 0.0.0.0:${PORT:-8000} adductomics_api.main:app"]

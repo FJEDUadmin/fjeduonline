@@ -60,6 +60,10 @@ def _save_upload(file: UploadFile, upload_dir: Path, prefix: str) -> str:
     return str(out_path)
 
 
+def _resolve_demo_file(settings: Settings, filename: str) -> str:
+    return str(Path(settings.demo_data_dir) / filename)
+
+
 @app.get("/")
 def dashboard() -> FileResponse:
     index_path = STATIC_DIR / "index.html"
@@ -291,6 +295,45 @@ def analyze_mrm_nl_upload_csv(
         rt_tolerance_min=rt_tolerance_min,
         isotope_tolerance=isotope_tolerance,
         top_k_per_transition=top_k_per_transition,
+    )
+
+
+@app.post("/api/v1/demo/run", response_model=AnalysisResponse)
+def run_demo_analysis(
+    sample_id: str = Form(default="DEMO_SAMPLE_001"),
+    pipeline: AnalysisPipeline = Depends(get_pipeline),
+    settings: Settings = Depends(get_settings),
+) -> AnalysisResponse:
+    try:
+        pipeline.ingest_adduct_csv(
+            file_path=_resolve_demo_file(settings, "sample_adduct_bank.csv"),
+            source_name="demo_generic",
+        )
+        pipeline.ingest_hmdb_csv(
+            file_path=_resolve_demo_file(settings, "sample_hmdb_export.csv"),
+            source_name="demo_hmdb",
+            ion_mode="protonated",
+        )
+        pipeline.ingest_massbank_csv(
+            file_path=_resolve_demo_file(settings, "sample_massbank_export.csv"),
+            source_name="demo_massbank",
+        )
+        transitions = pipeline.parse_transition_csv(
+            file_path=_resolve_demo_file(settings, "sample_mrm_nl.csv"),
+            sample_id=sample_id,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=500, detail=f"Demo data missing: {exc}") from exc
+    except (KeyError, ValueError) as exc:
+        raise HTTPException(status_code=500, detail=f"Demo data invalid: {exc}") from exc
+
+    return pipeline.analyze_transitions(
+        transitions=transitions,
+        tolerance_ppm=settings.default_tolerance_ppm,
+        neutral_loss_tolerance_da=settings.default_nl_tolerance_da,
+        rt_tolerance_min=settings.default_rt_tolerance_min,
+        isotope_tolerance=settings.default_isotope_tolerance,
+        top_k_per_transition=settings.max_candidates_per_transition,
     )
 
 

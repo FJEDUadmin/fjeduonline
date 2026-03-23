@@ -1,5 +1,6 @@
 const statusBox = document.getElementById("statusBox");
 const metaBox = document.getElementById("metaBox");
+const demoForm = document.getElementById("demoForm");
 const ingestGenericForm = document.getElementById("ingestGenericForm");
 const ingestHmdbForm = document.getElementById("ingestHmdbForm");
 const ingestMassBankForm = document.getElementById("ingestMassBankForm");
@@ -82,6 +83,16 @@ function renderPathways(pathways) {
   }
 }
 
+function renderAnalysisResult(result, statusPrefix = "Analysis complete.") {
+  latestAnalysisResult = result;
+  setStatus(
+    `${statusPrefix}\nSample: ${result.sample_id}\nTransitions: ${result.transitions_analyzed}\nCandidates: ${result.candidates.length}`
+  );
+  renderMetadata(result.metadata);
+  renderCandidates(result.candidates);
+  renderPathways(result.pathway_scores);
+}
+
 function renderRStatus(payload) {
   if (!payload) {
     rBox.textContent = "R statistics status unavailable.";
@@ -102,6 +113,18 @@ async function postForm(endpoint, formData) {
   }
   return data;
 }
+
+demoForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    setStatus("Running one-click demo...");
+    const formData = new FormData(demoForm);
+    const result = await postForm("/api/v1/demo/run", formData);
+    renderAnalysisResult(result, "Demo run complete.");
+  } catch (error) {
+    setStatus(`Demo run failed: ${error.message}`, true);
+  }
+});
 
 ingestGenericForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -151,13 +174,7 @@ analyzeForm.addEventListener("submit", async (event) => {
     setStatus("Running MRM/NL analysis...");
     const formData = new FormData(analyzeForm);
     const result = await postForm("/api/v1/analyze/mrm-nl/upload-csv", formData);
-    setStatus(
-      `Analysis complete.\nSample: ${result.sample_id}\nTransitions: ${result.transitions_analyzed}\nCandidates: ${result.candidates.length}`
-    );
-    latestAnalysisResult = result;
-    renderMetadata(result.metadata);
-    renderCandidates(result.candidates);
-    renderPathways(result.pathway_scores);
+    renderAnalysisResult(result, "Analysis complete.");
   } catch (error) {
     setStatus(`Analysis failed: ${error.message}`, true);
   }
@@ -174,13 +191,7 @@ analyzeToolForm.addEventListener("submit", async (event) => {
     formData.set("isotope_tolerance", "0.15");
     formData.set("top_k_per_transition", "5");
     const result = await postForm("/api/v1/analyze/tool/upload-csv", formData);
-    setStatus(
-      `Tool-based analysis complete.\nSample: ${result.sample_id}\nTransitions: ${result.transitions_analyzed}\nCandidates: ${result.candidates.length}`
-    );
-    latestAnalysisResult = result;
-    renderMetadata(result.metadata);
-    renderCandidates(result.candidates);
-    renderPathways(result.pathway_scores);
+    renderAnalysisResult(result, "Tool-based analysis complete.");
   } catch (error) {
     setStatus(`Tool analysis failed: ${error.message}`, true);
   }
