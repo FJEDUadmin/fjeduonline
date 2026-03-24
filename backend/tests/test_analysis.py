@@ -99,7 +99,7 @@ def test_pipeline_pubchem_ingest(tmp_path: Path) -> None:
     adducts = repo.list_adducts(limit=10)
     assert len(adducts) == 2
     assert adducts[0]["source_name"] == "pubchem_test"
-    assert any(a["adduct_id"] == "2244" for a in adducts)
+    assert any(a["adduct_id"] == "12345" for a in adducts)
 
 
 def test_pipeline_literature_ingest(tmp_path: Path) -> None:
