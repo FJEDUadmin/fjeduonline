@@ -83,6 +83,42 @@ def test_pipeline_massbank_ingest(tmp_path: Path) -> None:
     assert matched["neutral_loss"] > 0
 
 
+def test_pipeline_pubchem_ingest(tmp_path: Path) -> None:
+    db_path = tmp_path / "test_pubchem.db"
+    repo = AdductRepository(str(db_path))
+    pipeline = AnalysisPipeline(repository=repo)
+
+    pubchem_csv = Path(__file__).resolve().parents[1] / "data" / "sample_pubchem_export.csv"
+    inserted = pipeline.ingest_pubchem_csv(
+        file_path=str(pubchem_csv),
+        source_name="pubchem_test",
+        ion_mode="protonated",
+    )
+    assert inserted == 2
+
+    adducts = repo.list_adducts(limit=10)
+    assert len(adducts) == 2
+    assert adducts[0]["source_name"] == "pubchem_test"
+    assert any(a["adduct_id"] == "2244" for a in adducts)
+
+
+def test_pipeline_literature_ingest(tmp_path: Path) -> None:
+    db_path = tmp_path / "test_literature.db"
+    repo = AdductRepository(str(db_path))
+    pipeline = AnalysisPipeline(repository=repo)
+
+    literature_csv = Path(__file__).resolve().parents[1] / "data" / "sample_literature_supplement.csv"
+    inserted = pipeline.ingest_literature_csv(
+        file_path=str(literature_csv),
+        source_name="literature_test",
+    )
+    assert inserted == 2
+
+    adducts = repo.list_adducts(limit=10)
+    assert len(adducts) == 2
+    assert all(a["source_name"] == "literature_test" for a in adducts)
+
+
 def test_pipeline_hmdb_case_insensitive_alias_ingest(tmp_path: Path) -> None:
     db_path = tmp_path / "test_hmdb_alias.db"
     repo = AdductRepository(str(db_path))

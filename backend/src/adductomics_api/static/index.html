@@ -77,6 +77,43 @@
       </section>
 
       <section class="card">
+        <h2>3.1) Ingest PubChem CSV</h2>
+        <form id="ingestPubChemForm">
+          <label>
+            Source Name
+            <input type="text" name="source_name" value="pubchem" required />
+          </label>
+          <label>
+            Ion Mode
+            <select name="ion_mode">
+              <option value="protonated" selected>Protonated [M+H]+</option>
+              <option value="neutral">Neutral Mass</option>
+            </select>
+          </label>
+          <label>
+            PubChem CSV
+            <input type="file" name="file" accept=".csv" required />
+          </label>
+          <button type="submit">Ingest PubChem CSV</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>3.2) Ingest Literature Supplement CSV</h2>
+        <form id="ingestLiteratureForm">
+          <label>
+            Source Name
+            <input type="text" name="source_name" value="literature" required />
+          </label>
+          <label>
+            Literature CSV
+            <input type="file" name="file" accept=".csv" required />
+          </label>
+          <button type="submit">Ingest Literature CSV</button>
+        </form>
+      </section>
+
+      <section class="card">
         <h2>4) Analyze MRM/NL CSV</h2>
         <form id="analyzeForm">
           <label>

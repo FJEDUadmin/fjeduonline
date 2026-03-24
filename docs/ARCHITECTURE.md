@@ -12,7 +12,7 @@
 ### A) Ingestion Layer
 
 - Connector interface (CSV today, external databanks next)
-- HMDB and MassBank CSV connectors implemented as formal databank adapters
+- HMDB, MassBank, PubChem, and literature supplementary CSV connectors implemented as formal databank adapters
 - Tool parser hub for MS-DIAL, MZmine, and Skyline exports
 - Source normalization to canonical `AdductRecord`
 - Version-tagged ingestion pipeline

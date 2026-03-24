@@ -18,7 +18,9 @@ from adductomics_api.schemas import (
     AnalyzeTransitionsRequest,
     IngestCsvRequest,
     IngestHmdbRequest,
+    IngestLiteratureRequest,
     IngestMassBankRequest,
+    IngestPubChemRequest,
     RStatisticsRequest,
     RStatisticsResponse,
 )
@@ -216,6 +218,110 @@ def ingest_massbank_upload(
         raise HTTPException(status_code=400, detail=f"MassBank schema missing field: {exc}") from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=f"Invalid value in MassBank CSV: {exc}") from exc
+
+    return {
+        "ingested_records": inserted,
+        "source_name": source_name,
+        "uploaded_file_path": upload_path,
+    }
+
+
+@app.post("/api/v1/ingest/adduct-bank/pubchem-csv")
+def ingest_pubchem_csv(
+    payload: IngestPubChemRequest, pipeline: AnalysisPipeline = Depends(get_pipeline)
+) -> dict:
+    try:
+        inserted = pipeline.ingest_pubchem_csv(
+            file_path=payload.file_path,
+            source_name=payload.source_name,
+            ion_mode=payload.ion_mode,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except KeyError as exc:
+        raise HTTPException(status_code=400, detail=f"PubChem schema missing field: {exc}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid value in PubChem CSV: {exc}") from exc
+
+    return {
+        "ingested_records": inserted,
+        "source_name": payload.source_name,
+        "ion_mode": payload.ion_mode,
+    }
+
+
+@app.post("/api/v1/ingest/adduct-bank/upload-pubchem")
+def ingest_pubchem_upload(
+    source_name: str = Form(default="pubchem"),
+    ion_mode: str = Form(default="protonated"),
+    file: UploadFile = File(...),
+    pipeline: AnalysisPipeline = Depends(get_pipeline),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    ion_mode_value = ion_mode.strip().lower()
+    upload_path = _save_upload(file=file, upload_dir=_ensure_upload_dir(settings), prefix="pubchem_export")
+    try:
+        inserted = pipeline.ingest_pubchem_csv(
+            file_path=upload_path,
+            source_name=source_name,
+            ion_mode=ion_mode_value,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=400, detail=f"PubChem schema missing field: {exc}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid value in PubChem CSV: {exc}") from exc
+
+    return {
+        "ingested_records": inserted,
+        "source_name": source_name,
+        "ion_mode": ion_mode_value,
+        "uploaded_file_path": upload_path,
+    }
+
+
+@app.post("/api/v1/ingest/adduct-bank/literature-csv")
+def ingest_literature_csv(
+    payload: IngestLiteratureRequest, pipeline: AnalysisPipeline = Depends(get_pipeline)
+) -> dict:
+    try:
+        inserted = pipeline.ingest_literature_csv(
+            file_path=payload.file_path,
+            source_name=payload.source_name,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except KeyError as exc:
+        raise HTTPException(status_code=400, detail=f"Literature schema missing field: {exc}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid value in literature CSV: {exc}") from exc
+
+    return {
+        "ingested_records": inserted,
+        "source_name": payload.source_name,
+    }
+
+
+@app.post("/api/v1/ingest/adduct-bank/upload-literature")
+def ingest_literature_upload(
+    source_name: str = Form(default="literature"),
+    file: UploadFile = File(...),
+    pipeline: AnalysisPipeline = Depends(get_pipeline),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    upload_path = _save_upload(
+        file=file,
+        upload_dir=_ensure_upload_dir(settings),
+        prefix="literature_export",
+    )
+    try:
+        inserted = pipeline.ingest_literature_csv(
+            file_path=upload_path,
+            source_name=source_name,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=400, detail=f"Literature schema missing field: {exc}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid value in literature CSV: {exc}") from exc
 
     return {
         "ingested_records": inserted,

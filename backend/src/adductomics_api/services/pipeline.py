@@ -11,7 +11,13 @@ from adductomics_api.schemas import (
     CandidateAdduct,
     MRMTransition,
 )
-from adductomics_api.services.connectors import CsvAdductConnector, HmdbCsvConnector, MassBankCsvConnector
+from adductomics_api.services.connectors import (
+    CsvAdductConnector,
+    HmdbCsvConnector,
+    LiteratureCsvConnector,
+    MassBankCsvConnector,
+    PubChemCsvConnector,
+)
 from adductomics_api.services.csv_utils import get_first, prepare_row, read_csv_rows_with_fallback
 from adductomics_api.services.identifier import CONFIDENCE_FRAMEWORK, SCORING_VERSION, score_candidates
 from adductomics_api.services.pathway import score_pathways
@@ -39,6 +45,20 @@ class AnalysisPipeline:
 
     def ingest_massbank_csv(self, file_path: str, source_name: str) -> int:
         connector = MassBankCsvConnector(file_path=file_path, source_name=source_name)
+        records = connector.load_records()
+        return self.repository.upsert_adducts(records)
+
+    def ingest_pubchem_csv(self, file_path: str, source_name: str, ion_mode: str = "protonated") -> int:
+        connector = PubChemCsvConnector(
+            file_path=file_path,
+            source_name=source_name,
+            ion_mode=ion_mode,
+        )
+        records = connector.load_records()
+        return self.repository.upsert_adducts(records)
+
+    def ingest_literature_csv(self, file_path: str, source_name: str) -> int:
+        connector = LiteratureCsvConnector(file_path=file_path, source_name=source_name)
         records = connector.load_records()
         return self.repository.upsert_adducts(records)
 

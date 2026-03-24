@@ -71,6 +71,17 @@ class IngestMassBankRequest(BaseModel):
     source_name: str = Field(default="massbank")
 
 
+class IngestPubChemRequest(BaseModel):
+    file_path: str = Field(..., description="Server-local PubChem export CSV path")
+    source_name: str = Field(default="pubchem")
+    ion_mode: Literal["neutral", "protonated"] = "protonated"
+
+
+class IngestLiteratureRequest(BaseModel):
+    file_path: str = Field(..., description="Server-local literature supplementary CSV path")
+    source_name: str = Field(default="literature")
+
+
 class AnalyzeToolCsvRequest(BaseModel):
     tool: Literal["msdial", "mzmine", "skyline"]
     file_path: str = Field(..., description="Server-local CSV path exported by the selected tool")

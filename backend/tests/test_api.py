@@ -92,6 +92,32 @@ def test_massbank_file_path_ingest_endpoint() -> None:
     assert payload["source_name"] == "massbank_file_path"
 
 
+def test_pubchem_and_literature_ingest_endpoints() -> None:
+    client = TestClient(app)
+    data_dir = Path(__file__).resolve().parents[1] / "data"
+
+    pubchem_resp = client.post(
+        "/api/v1/ingest/adduct-bank/pubchem-csv",
+        json={
+            "file_path": str(data_dir / "sample_pubchem_export.csv"),
+            "source_name": "pubchem_api",
+            "ion_mode": "protonated",
+        },
+    )
+    assert pubchem_resp.status_code == 200
+    assert pubchem_resp.json()["ingested_records"] == 2
+
+    lit_resp = client.post(
+        "/api/v1/ingest/adduct-bank/literature-csv",
+        json={
+            "file_path": str(data_dir / "sample_literature_supplement.csv"),
+            "source_name": "literature_api",
+        },
+    )
+    assert lit_resp.status_code == 200
+    assert lit_resp.json()["ingested_records"] == 2
+
+
 def test_hmdb_upload_alias_columns_endpoint() -> None:
     client = TestClient(app)
     hmdb_alias_csv = (
@@ -131,6 +157,24 @@ def test_upload_ingest_and_hmdb_endpoints() -> None:
     )
     assert hmdb_upload.status_code == 200
     assert hmdb_upload.json()["ingested_records"] == 3
+
+    pubchem_bytes = (data_dir / "sample_pubchem_export.csv").read_bytes()
+    pubchem_upload = client.post(
+        "/api/v1/ingest/adduct-bank/upload-pubchem",
+        data={"source_name": "pubchem_uploaded", "ion_mode": "protonated"},
+        files={"file": ("sample_pubchem_export.csv", BytesIO(pubchem_bytes), "text/csv")},
+    )
+    assert pubchem_upload.status_code == 200
+    assert pubchem_upload.json()["ingested_records"] == 2
+
+    literature_bytes = (data_dir / "sample_literature_supplement.csv").read_bytes()
+    literature_upload = client.post(
+        "/api/v1/ingest/adduct-bank/upload-literature",
+        data={"source_name": "literature_uploaded"},
+        files={"file": ("sample_literature_supplement.csv", BytesIO(literature_bytes), "text/csv")},
+    )
+    assert literature_upload.status_code == 200
+    assert literature_upload.json()["ingested_records"] == 2
 
     massbank_bytes = (data_dir / "sample_massbank_export.csv").read_bytes()
     massbank_upload = client.post(
