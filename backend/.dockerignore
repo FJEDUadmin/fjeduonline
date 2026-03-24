@@ -6,3 +6,5 @@ __pycache__
 *.pyd
 data/uploads
 data/r_reports
+data/adductomics.db
+r_modules/packages

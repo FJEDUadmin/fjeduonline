@@ -22,6 +22,14 @@ pip install -e ".[dev]"
 uvicorn adductomics_api.main:app --reload
 ```
 
+One-shot production bootstrap:
+
+```bash
+cp .env.prod.example .env.prod
+# edit DOMAIN / ACME_EMAIL
+bash deploy/bootstrap_prod.sh
+```
+
 Open:
 
 - API docs: `http://127.0.0.1:8000/docs`
@@ -52,6 +60,13 @@ Tool export support:
 - MS-DIAL alignment table exports
 - MZmine feature table exports
 - Skyline transition report exports
+
+R package onboarding (one-shot build):
+
+- CRAN list: `r_modules/cran_packages.txt` (one package per line)
+- Bioconductor list: `r_modules/bioc_packages.txt` (one package per line)
+- Local tarballs: place `*.tar.gz` into `r_modules/packages/`
+- During Docker production build, these packages are auto-installed.
 
 MassBank CSV expected column aliases:
 

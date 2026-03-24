@@ -30,10 +30,26 @@ cp .env.prod.example .env.prod
 - `DOMAIN=你的網域`
 - `ACME_EMAIL=你的 email`
 
+### 3.1) 準備 R 套件（一次到位）
+
+你有 R 生物統計套件的話，建議這裡一次放進去：
+
+1. CRAN 套件清單（每行一個）：`backend/r_modules/cran_packages.txt`
+2. Bioconductor 套件清單（每行一個）：`backend/r_modules/bioc_packages.txt`
+3. 你自己的套件 tarball：放到 `backend/r_modules/packages/*.tar.gz`
+
+部署 build 時會自動安裝，避免上線後再補裝。
+
 ### 4) 啟動 production stack
 
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+```
+
+或一鍵：
+
+```bash
+bash deploy/bootstrap_prod.sh
 ```
 
 此流程會啟動：
@@ -82,3 +98,4 @@ docker compose up --build
 - [ ] HMDB/MassBank 上傳可成功
 - [ ] Tool export (MS-DIAL/MZmine/Skyline) 可分析
 - [ ] R report endpoint 回傳 `completed` 或 `skipped`（未安裝 R 時）
+- [ ] 你的自訂 R package 可在 container 內 `library(<pkg>)` 載入

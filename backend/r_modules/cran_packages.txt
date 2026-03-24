@@ -1,0 +1,8 @@
+# One package per line. Example:
+# jsonlite
+# Add one CRAN package per line.
+# Example:
+# dplyr
+# ggplot2
+
+jsonlite

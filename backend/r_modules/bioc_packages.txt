@@ -1,0 +1,6 @@
+# One Bioconductor package per line. Example:
+# Biostrings
+# Add one Bioconductor package per line.
+# Example:
+# limma
+# edgeR
