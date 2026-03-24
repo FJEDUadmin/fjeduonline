@@ -4,6 +4,7 @@ const demoForm = document.getElementById("demoForm");
 const ingestGenericForm = document.getElementById("ingestGenericForm");
 const ingestHmdbForm = document.getElementById("ingestHmdbForm");
 const ingestMassBankForm = document.getElementById("ingestMassBankForm");
+const ingestMetlinForm = document.getElementById("ingestMetlinForm");
 const ingestPubChemForm = document.getElementById("ingestPubChemForm");
 const ingestLiteratureForm = document.getElementById("ingestLiteratureForm");
 const analyzeForm = document.getElementById("analyzeForm");
@@ -167,6 +168,20 @@ ingestMassBankForm.addEventListener("submit", async (event) => {
     );
   } catch (error) {
     setStatus(`MassBank ingest failed: ${error.message}`, true);
+  }
+});
+
+ingestMetlinForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    setStatus("Uploading METLIN CSV...");
+    const formData = new FormData(ingestMetlinForm);
+    const result = await postForm("/api/v1/ingest/adduct-bank/upload-metlin", formData);
+    setStatus(
+      `METLIN CSV ingested.\nRecords: ${result.ingested_records}\nSource: ${result.source_name}`
+    );
+  } catch (error) {
+    setStatus(`METLIN ingest failed: ${error.message}`, true);
   }
 });
 

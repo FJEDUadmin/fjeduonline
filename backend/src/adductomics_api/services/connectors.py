@@ -234,6 +234,91 @@ class MassBankCsvConnector:
         return records
 
 
+class MetlinCsvConnector:
+    """
+    METLIN export connector (CSV).
+
+    Expected column aliases:
+      - id: metlin_id | id | feature_id
+      - name: metabolite_name | compound_name | name
+      - precursor_mz: precursor_mz | mz | exact_mass
+      - product_mz: product_mz | fragment_mz (optional)
+      - neutral_loss: neutral_loss | nl (optional)
+      - expected_rt: retention_time | rt (optional)
+      - isotope_ratio: isotope_ratio (optional)
+      - formula: formula | molecular_formula (optional)
+      - smiles: smiles | canonical_smiles (optional)
+      - pathway: pathway | pathways (optional)
+    """
+
+    def __init__(self, file_path: str, source_name: str) -> None:
+        self.file_path = file_path
+        self.source_name = source_name
+
+    @staticmethod
+    def _normalize_pathway(raw: str | None) -> str | None:
+        if raw is None:
+            return None
+        for sep in [";", "|", ","]:
+            if sep in raw:
+                token = raw.split(sep)[0].strip()
+                return token or None
+        return raw.strip() or None
+
+    def load_records(self) -> list[AdductRecord]:
+        csv_path = Path(self.file_path)
+        if not csv_path.exists():
+            raise FileNotFoundError(f"METLIN CSV not found: {self.file_path}")
+
+        records: list[AdductRecord] = []
+        for idx, row in enumerate(read_csv_rows_with_fallback(csv_path), start=1):
+            prepared_row = prepare_row(row)
+            metlin_id = get_first(prepared_row, ["metlin_id", "id", "feature_id"]) or f"METLIN_AUTO_{idx}"
+            name = get_first(prepared_row, ["metabolite_name", "compound_name", "name"])
+            if name is None:
+                raise KeyError("metabolite_name")
+
+            precursor_raw = get_first(prepared_row, ["precursor_mz", "mz", "exact_mass", "mass"])
+            if precursor_raw is None:
+                raise KeyError("precursor_mz")
+            precursor_mz = float(precursor_raw)
+
+            product_raw = get_first(prepared_row, ["product_mz", "fragment_mz"])
+            nl_raw = get_first(prepared_row, ["neutral_loss", "nl"])
+            product_mz = float(product_raw) if product_raw else None
+            neutral_loss = (
+                float(nl_raw)
+                if nl_raw
+                else (precursor_mz - product_mz if product_mz and precursor_mz > product_mz else None)
+            )
+
+            records.append(
+                AdductRecord(
+                    adduct_id=metlin_id,
+                    source_name=self.source_name,
+                    adduct_name=name,
+                    precursor_mz=precursor_mz,
+                    product_mz=product_mz,
+                    neutral_loss=neutral_loss if neutral_loss and neutral_loss > 0 else None,
+                    expected_rt=(
+                        float(rt_raw)
+                        if (rt_raw := get_first(prepared_row, ["retention_time", "rt", "expected_rt"]))
+                        else None
+                    ),
+                    isotope_ratio=(
+                        float(iso_raw)
+                        if (iso_raw := get_first(prepared_row, ["isotope_ratio", "isotope_pattern_ratio"]))
+                        else None
+                    ),
+                    formula=get_first(prepared_row, ["formula", "molecular_formula"]),
+                    smiles=get_first(prepared_row, ["smiles", "canonical_smiles"]),
+                    pathway=self._normalize_pathway(get_first(prepared_row, ["pathway", "pathways"])),
+                    evidence_level="reported",
+                )
+            )
+        return records
+
+
 class PubChemCsvConnector:
     """
     PubChem export connector (CSV).
@@ -405,6 +490,8 @@ def load_databank_connector(
         return HmdbCsvConnector(file_path=file_path, source_name=source_name, ion_mode=ion_mode)
     if key == "massbank":
         return MassBankCsvConnector(file_path=file_path, source_name=source_name)
+    if key == "metlin":
+        return MetlinCsvConnector(file_path=file_path, source_name=source_name)
     if key == "pubchem":
         return PubChemCsvConnector(file_path=file_path, source_name=source_name, ion_mode=ion_mode)
     if key in {"literature", "supplementary", "supplemental"}:

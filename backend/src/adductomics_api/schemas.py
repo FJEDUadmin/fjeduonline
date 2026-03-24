@@ -71,6 +71,11 @@ class IngestMassBankRequest(BaseModel):
     source_name: str = Field(default="massbank")
 
 
+class IngestMetlinRequest(BaseModel):
+    file_path: str = Field(..., description="Server-local METLIN export CSV path")
+    source_name: str = Field(default="metlin")
+
+
 class IngestPubChemRequest(BaseModel):
     file_path: str = Field(..., description="Server-local PubChem export CSV path")
     source_name: str = Field(default="pubchem")

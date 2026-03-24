@@ -77,7 +77,22 @@
       </section>
 
       <section class="card">
-        <h2>3.1) Ingest PubChem CSV</h2>
+        <h2>3.1) Ingest METLIN CSV</h2>
+        <form id="ingestMetlinForm">
+          <label>
+            Source Name
+            <input type="text" name="source_name" value="metlin" required />
+          </label>
+          <label>
+            METLIN CSV
+            <input type="file" name="file" accept=".csv" required />
+          </label>
+          <button type="submit">Ingest METLIN CSV</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>3.2) Ingest PubChem CSV</h2>
         <form id="ingestPubChemForm">
           <label>
             Source Name
@@ -99,7 +114,7 @@
       </section>
 
       <section class="card">
-        <h2>3.2) Ingest Literature Supplement CSV</h2>
+        <h2>3.3) Ingest Literature Supplement CSV</h2>
         <form id="ingestLiteratureForm">
           <label>
             Source Name

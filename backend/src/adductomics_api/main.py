@@ -20,6 +20,7 @@ from adductomics_api.schemas import (
     IngestHmdbRequest,
     IngestLiteratureRequest,
     IngestMassBankRequest,
+    IngestMetlinRequest,
     IngestPubChemRequest,
     RStatisticsRequest,
     RStatisticsResponse,
@@ -218,6 +219,57 @@ def ingest_massbank_upload(
         raise HTTPException(status_code=400, detail=f"MassBank schema missing field: {exc}") from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=f"Invalid value in MassBank CSV: {exc}") from exc
+
+    return {
+        "ingested_records": inserted,
+        "source_name": source_name,
+        "uploaded_file_path": upload_path,
+    }
+
+
+@app.post("/api/v1/ingest/adduct-bank/metlin-csv")
+def ingest_metlin_csv(
+    payload: IngestMetlinRequest, pipeline: AnalysisPipeline = Depends(get_pipeline)
+) -> dict:
+    try:
+        inserted = pipeline.ingest_metlin_csv(
+            file_path=payload.file_path,
+            source_name=payload.source_name,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except KeyError as exc:
+        raise HTTPException(status_code=400, detail=f"METLIN schema missing field: {exc}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid value in METLIN CSV: {exc}") from exc
+
+    return {
+        "ingested_records": inserted,
+        "source_name": payload.source_name,
+    }
+
+
+@app.post("/api/v1/ingest/adduct-bank/upload-metlin")
+def ingest_metlin_upload(
+    source_name: str = Form(default="metlin"),
+    file: UploadFile = File(...),
+    pipeline: AnalysisPipeline = Depends(get_pipeline),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    upload_path = _save_upload(
+        file=file,
+        upload_dir=_ensure_upload_dir(settings),
+        prefix="metlin_export",
+    )
+    try:
+        inserted = pipeline.ingest_metlin_csv(
+            file_path=upload_path,
+            source_name=source_name,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=400, detail=f"METLIN schema missing field: {exc}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid value in METLIN CSV: {exc}") from exc
 
     return {
         "ingested_records": inserted,

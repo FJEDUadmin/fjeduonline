@@ -16,6 +16,7 @@ from adductomics_api.services.connectors import (
     HmdbCsvConnector,
     LiteratureCsvConnector,
     MassBankCsvConnector,
+    MetlinCsvConnector,
     PubChemCsvConnector,
 )
 from adductomics_api.services.csv_utils import get_first, prepare_row, read_csv_rows_with_fallback
@@ -45,6 +46,11 @@ class AnalysisPipeline:
 
     def ingest_massbank_csv(self, file_path: str, source_name: str) -> int:
         connector = MassBankCsvConnector(file_path=file_path, source_name=source_name)
+        records = connector.load_records()
+        return self.repository.upsert_adducts(records)
+
+    def ingest_metlin_csv(self, file_path: str, source_name: str) -> int:
+        connector = MetlinCsvConnector(file_path=file_path, source_name=source_name)
         records = connector.load_records()
         return self.repository.upsert_adducts(records)
 

@@ -92,6 +92,23 @@ def test_massbank_file_path_ingest_endpoint() -> None:
     assert payload["source_name"] == "massbank_file_path"
 
 
+def test_metlin_file_path_ingest_endpoint() -> None:
+    client = TestClient(app)
+    data_dir = Path(__file__).resolve().parents[1] / "data"
+
+    response = client.post(
+        "/api/v1/ingest/adduct-bank/metlin-csv",
+        json={
+            "file_path": str(data_dir / "sample_metlin_export.csv"),
+            "source_name": "metlin_file_path",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ingested_records"] == 2
+    assert payload["source_name"] == "metlin_file_path"
+
+
 def test_pubchem_and_literature_ingest_endpoints() -> None:
     client = TestClient(app)
     data_dir = Path(__file__).resolve().parents[1] / "data"
@@ -184,6 +201,15 @@ def test_upload_ingest_and_hmdb_endpoints() -> None:
     )
     assert massbank_upload.status_code == 200
     assert massbank_upload.json()["ingested_records"] == 3
+
+    metlin_bytes = (data_dir / "sample_metlin_export.csv").read_bytes()
+    metlin_upload = client.post(
+        "/api/v1/ingest/adduct-bank/upload-metlin",
+        data={"source_name": "metlin_uploaded"},
+        files={"file": ("sample_metlin_export.csv", BytesIO(metlin_bytes), "text/csv")},
+    )
+    assert metlin_upload.status_code == 200
+    assert metlin_upload.json()["ingested_records"] == 2
 
     transition_bytes = (data_dir / "sample_mrm_nl.csv").read_bytes()
     analyze_upload = client.post(

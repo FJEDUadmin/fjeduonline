@@ -5,7 +5,7 @@
 目前版本提供：
 
 - DNA adduct 資料庫統一 schema（可匯入多來源資料）
-- HMDB + MassBank + PubChem + Literature CSV connector（四個正式 databank adapter）
+- HMDB + MassBank + METLIN + PubChem + Literature CSV connector（五個正式 databank adapter）
 - MS-DIAL / MZmine / Skyline tool export parser hub
 - LC-MS MRM / Neutral Loss (NL) 分析流程
 - Adduct 候選識別與信心分數排序（scoring model v3，含 confidence level）
@@ -115,7 +115,7 @@ Dashboard：
 
 ## 5) 下一步建議（期刊等級）
 
-1. **資料庫連接器擴充**：METLIN 匯出與資料版本同步機制（HMDB/MassBank/PubChem/Literature 已完成）
+1. **資料庫連接器擴充**：資料版本同步機制（HMDB/MassBank/METLIN/PubChem/Literature 已完成）
 2. **結構層級特徵**：同位素 pattern、RT model、MS/MS fragment rules
 3. **統計嚴謹化**：FDR 控制、批次效應校正、跨儀器校準
 4. **可追溯性**：分析參數版本化、immutable run artifact、審計日誌

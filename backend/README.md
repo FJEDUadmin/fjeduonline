@@ -5,6 +5,7 @@ FastAPI backend for:
 - adduct bank ingestion
 - HMDB CSV connector ingestion
 - MassBank CSV connector ingestion
+- METLIN CSV connector ingestion
 - PubChem CSV connector ingestion
 - literature supplementary CSV connector ingestion
 - tool export parser hub (MS-DIAL, MZmine, Skyline)
@@ -76,6 +77,13 @@ MassBank CSV expected column aliases:
 - `compound_name` / `name`
 - `precursor_mz` (or `mz`, `exact_mass`)
 - optional: `product_mz`, `retention_time`, `isotope_ratio`, `formula`, `pathway`
+
+METLIN CSV expected column aliases:
+
+- `metlin_id` / `id` / `feature_id`
+- `metabolite_name` / `compound_name` / `name`
+- `precursor_mz` (or `mz`, `exact_mass`)
+- optional: `product_mz`, `neutral_loss`, `retention_time`, `isotope_ratio`, `formula`, `smiles`, `pathway`
 
 PubChem CSV expected column aliases:
 
