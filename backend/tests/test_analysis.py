@@ -98,7 +98,7 @@ def test_pipeline_metlin_ingest(tmp_path: Path) -> None:
     adducts = repo.list_adducts(limit=10)
     assert len(adducts) == 2
     assert all(a["source_name"] == "metlin_test" for a in adducts)
-    assert any(a["adduct_id"] == "METLIN:000001" for a in adducts)
+    assert any(a["adduct_id"] == "METLIN0001" for a in adducts)
 
 
 def test_pipeline_pubchem_ingest(tmp_path: Path) -> None:
