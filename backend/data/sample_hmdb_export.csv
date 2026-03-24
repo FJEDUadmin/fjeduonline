@@ -1,0 +1,4 @@
+accession,name,monoisotopic_molecular_weight,chemical_formula,smiles,pathways
+HMDB00001,1-Methyladenine,149.0701,C6H7N5,Cn1cnc2n(cnc12)N,Purine metabolism;DNA repair
+HMDB00002,8-Oxoguanine,167.0437,C5H5N5O,O=c1[nH]c(N)nc2[nH]cnc12,Oxidative stress response
+HMDB00003,N6-Methyladenosine,281.1124,C11H15N5O4,CNc1ncnc2n(cnc12)[C@H]1O[C@H](CO)[C@@H](O)[C@H]1O,Nucleotide metabolism

@@ -1,0 +1,3 @@
+adduct_id,adduct_name,precursor_mz,product_mz,neutral_loss,pathway,evidence_level,formula
+LIT001,8-oxo-dG (literature),284.0989,168.0661,116.0328,Oxidative DNA Damage,curated,C10H13N5O5
+LIT002,M1dG (literature),304.1038,188.0710,116.0328,Lipid Peroxidation,reported,C11H13N5O6

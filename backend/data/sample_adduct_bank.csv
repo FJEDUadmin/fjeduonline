@@ -1,0 +1,6 @@
+adduct_id,adduct_name,precursor_mz,product_mz,neutral_loss,expected_rt,isotope_ratio,formula,smiles,pathway,evidence_level
+AD001,8-oxo-dG,284.0987,168.0660,116.0327,4.10,0.24,C10H13N5O5,,Oxidative DNA Damage,curated
+AD002,N2-ethyl-dG,296.1143,180.0815,116.0328,4.85,0.19,C12H17N5O4,,Alkylation Damage,reported
+AD003,O6-methyl-dG,282.0830,166.0502,116.0328,3.51,0.20,C11H15N5O4,,Alkylation Damage,curated
+AD004,"1,N2-propano-dG",324.1299,208.0971,116.0328,6.20,0.35,C13H17N5O5,,Lipid Peroxidation,reported
+AD005,M1dG,304.1038,188.0710,116.0328,5.68,0.31,C11H13N5O6,,Lipid Peroxidation,curated

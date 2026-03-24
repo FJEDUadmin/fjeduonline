@@ -1,0 +1,2 @@
+METLIN_ID,Metabolite Name,Precursor MZ,Product MZ,Retention Time,Isotope Ratio,Formula,SMILES,Pathway
+METLIN0001,8-oxo-2'-deoxyguanosine,284.0987,168.0660,5.1,0.22,C10H13N5O5,NC1=NC2=C(N1CO[C@H]3O[C@H](CO)[C@@H](O)[C@H]3O)N(C=N2)C=O,Oxidative DNA Damage

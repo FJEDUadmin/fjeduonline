@@ -1,0 +1,4 @@
+transition_id,precursor_mz,product_mz,neutral_loss,retention_time,isotope_ratio,intensity
+T001,284.0990,168.0662,116.0328,4.1,0.24,180000
+T002,304.1041,188.0712,116.0329,5.7,0.31,92000
+T003,282.0828,166.0500,116.0328,3.5,0.20,74000
