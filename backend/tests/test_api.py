@@ -33,6 +33,15 @@ def test_dashboard_endpoint() -> None:
     assert "DNA Adductomics Platform" in response.text
 
 
+def test_metlin_template_download_endpoint() -> None:
+    client = TestClient(app)
+    response = client.get("/api/v1/templates/metlin-csv")
+    assert response.status_code == 200
+    content_disposition = response.headers.get("content-disposition", "")
+    assert "metlin_template.csv" in content_disposition
+    assert "METLIN_ID" in response.text
+
+
 def test_demo_run_endpoint() -> None:
     client = TestClient(app)
     response = client.post("/api/v1/demo/run", data={"sample_id": "DEMO_API_S1"})

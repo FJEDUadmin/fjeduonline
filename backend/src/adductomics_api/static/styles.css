@@ -89,6 +89,38 @@ button:hover {
   background: #155cc6;
 }
 
+.inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.template-link {
+  display: inline-block;
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 0.42rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid #bcccdc;
+  color: #1b2330;
+  background: #ffffff;
+}
+
+.template-link:hover {
+  background: #f4f7fb;
+}
+
+.hint-text {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #486581;
+}
+
+.hint-text.error {
+  color: #b42318;
+}
+
 .status {
   background: #f0f4f8;
   border-radius: 8px;

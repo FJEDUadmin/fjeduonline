@@ -84,6 +84,9 @@ METLIN CSV expected column aliases:
 - `metabolite_name` / `compound_name` / `name`
 - `precursor_mz` (or `mz`, `exact_mass`)
 - optional: `product_mz`, `neutral_loss`, `retention_time`, `isotope_ratio`, `formula`, `smiles`, `pathway`
+- dashboard helper:
+  - template download: `GET /api/v1/templates/metlin-csv`
+  - pre-upload checks in UI: confirms required headers (`metlin_id|id|feature_id`, `metabolite_name|compound_name|name`, `precursor_mz|mz|exact_mass`) before upload
 
 PubChem CSV expected column aliases:
 

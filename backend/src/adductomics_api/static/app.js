@@ -11,6 +11,7 @@ const analyzeForm = document.getElementById("analyzeForm");
 const analyzeToolForm = document.getElementById("analyzeToolForm");
 const runRReportForm = document.getElementById("runRReportForm");
 const rBox = document.getElementById("rBox");
+const metlinHelpBox = document.getElementById("metlinHelpBox");
 
 const candidatesBody = document.querySelector("#candidatesTable tbody");
 const pathwaysBody = document.querySelector("#pathwaysTable tbody");
@@ -117,6 +118,24 @@ async function postForm(endpoint, formData) {
   return data;
 }
 
+async function validateMetlinCsv(file) {
+  const content = await file.text();
+  const firstLine = (content.split(/\r?\n/).find((line) => line.trim().length > 0) || "").trim();
+  const headers = firstLine
+    .split(",")
+    .map((h) => h.trim().toLowerCase().replace(/[ _.\-]+/g, ""));
+  const hasMetlinId = headers.some((h) => ["metlinid", "id", "featureid"].includes(h));
+  const hasName = headers.some((h) => ["metabolitename", "compoundname", "name"].includes(h));
+  const hasPrecursor = headers.some((h) => ["precursormz", "mz", "exactmass", "mass"].includes(h));
+  return { hasMetlinId, hasName, hasPrecursor };
+}
+
+function updateMetlinHelp(message, isError = false) {
+  if (!metlinHelpBox) return;
+  metlinHelpBox.textContent = message;
+  metlinHelpBox.classList.toggle("error", isError);
+}
+
 demoForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
@@ -174,6 +193,26 @@ ingestMassBankForm.addEventListener("submit", async (event) => {
 ingestMetlinForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
+    const fileInput = ingestMetlinForm.querySelector("input[name='file']");
+    const metlinFile = fileInput?.files?.[0];
+    if (!metlinFile) {
+      updateMetlinHelp("Please choose a METLIN CSV file first.", true);
+      throw new Error("No METLIN CSV selected");
+    }
+    const validation = await validateMetlinCsv(metlinFile);
+    if (!validation.hasMetlinId || !validation.hasName || !validation.hasPrecursor) {
+      updateMetlinHelp(
+        "METLIN header check failed. Required header groups: " +
+          "ID (metlin_id/id/feature_id), name (metabolite_name/compound_name/name), " +
+          "and precursor m/z (precursor_mz/mz/exact_mass).",
+        true
+      );
+      throw new Error("METLIN CSV missing required columns");
+    }
+    updateMetlinHelp(
+      "METLIN header check passed: required columns detected.",
+      false
+    );
     setStatus("Uploading METLIN CSV...");
     const formData = new FormData(ingestMetlinForm);
     const result = await postForm("/api/v1/ingest/adduct-bank/upload-metlin", formData);

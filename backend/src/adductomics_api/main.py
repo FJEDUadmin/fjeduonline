@@ -590,3 +590,15 @@ def list_adducts(
     pipeline: AnalysisPipeline = Depends(get_pipeline),
 ) -> list[dict]:
     return pipeline.repository.list_adducts(limit=limit)
+
+
+@app.get("/api/v1/templates/metlin-csv")
+def download_metlin_template(settings: Settings = Depends(get_settings)) -> FileResponse:
+    template_path = Path(settings.demo_data_dir) / "templates" / "metlin_template.csv"
+    if not template_path.exists():
+        raise HTTPException(status_code=404, detail=f"Template file not found: {template_path}")
+    return FileResponse(
+        path=template_path,
+        filename="metlin_template.csv",
+        media_type="text/csv",
+    )

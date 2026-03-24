@@ -83,6 +83,18 @@
             Source Name
             <input type="text" name="source_name" value="metlin" required />
           </label>
+          <p class="hint-text">
+            Required columns (aliases accepted): <code>metabolite_name</code>, <code>precursor_mz</code>.
+            Recommended ID column: <code>metlin_id</code> (or <code>id</code>/<code>feature_id</code>).
+            Optional: <code>product_mz</code>, <code>neutral_loss</code>, <code>retention_time</code>,
+            <code>isotope_ratio</code>, <code>formula</code>, <code>smiles</code>, <code>pathway</code>.
+          </p>
+          <p class="hint-text">
+            <a href="/api/v1/templates/metlin-csv" target="_blank" rel="noopener">Download METLIN CSV template</a>
+          </p>
+          <p id="metlinHelpBox" class="hint-text">
+            Header check status will appear here.
+          </p>
           <label>
             METLIN CSV
             <input type="file" name="file" accept=".csv" required />
