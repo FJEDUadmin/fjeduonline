@@ -124,7 +124,10 @@ def calibration_curve(
     r2 = 1.0 - sse / sst if sst > 0 else np.nan
 
     back_calculated = (y - intercept) / slope
-    re_pct = (back_calculated - x) / x * 100
+    # Relative error is undefined at zero concentration; keep it as NaN instead of raising warnings.
+    re_pct = np.full_like(x, np.nan, dtype=float)
+    nonzero_mask = ~np.isclose(x, 0.0)
+    re_pct[nonzero_mask] = ((back_calculated[nonzero_mask] - x[nonzero_mask]) / x[nonzero_mask]) * 100
     re_pct = np.where(np.isfinite(re_pct), re_pct, np.nan)
 
     points_df = pd.DataFrame(
@@ -195,8 +198,12 @@ def lod_loq_analysis(
         blank_series = fit_df.loc[np.isclose(fit_df[concentration_col].astype(float), 0.0), response_col].dropna().astype(float)
     if blank_series.empty:
         raise ValueError("Cannot estimate blank SD. Provide blank response column or rows with concentration = 0.")
+    if blank_series.shape[0] < 2:
+        raise ValueError("Need at least 2 blank response values to estimate blank SD for LOD/LOQ.")
 
     sd_blank = float(blank_series.std(ddof=1))
+    if np.isclose(slope, 0.0):
+        raise ValueError("Slope is near zero; LOD/LOQ cannot be estimated from this calibration.")
     lod = 3.3 * sd_blank / abs(slope)
     loq = 10 * sd_blank / abs(slope)
 
