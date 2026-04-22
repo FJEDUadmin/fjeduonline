@@ -15,6 +15,7 @@ from analysis_modules import (
     apply_publication_style,
     calibration_curve,
     descriptive_statistics,
+    grouped_bar_error_analysis,
     lod_loq_analysis,
     matrix_effect_recovery_analysis,
     pca_analysis,
@@ -160,6 +161,7 @@ def main() -> None:
 - **LOD / LOQ**（以 SD/slope 公式估算）
 - **Precision & Accuracy (QC)**
 - **Matrix effect / Recovery / Process efficiency**
+- **Grouped bar chart + error bars**（可做你提供的那種圖）
 - **Two-group t-test + FDR + Volcano plot**
 - **One-way ANOVA + FDR**
 - **PCA（含 score plot 與 explained variance）**
@@ -218,6 +220,7 @@ def main() -> None:
     newbie_mode = st.toggle("新手模式（只顯示常用項目）", value=True)
     if newbie_mode:
         use_desc = st.checkbox("Descriptive statistics + 分布檢查", value=True)
+        use_grouped_bar = st.checkbox("指定格式圖：分組柱狀圖 + 誤差棒", value=True)
         use_me = st.checkbox("Matrix effect / Recovery", value=False)
         with st.expander("進階分析（可選）", expanded=False):
             use_calib = st.checkbox("Calibration curve", value=False)
@@ -230,6 +233,7 @@ def main() -> None:
         c1, c2 = st.columns(2)
         with c1:
             use_desc = st.checkbox("Descriptive statistics + 分布檢查", value=True)
+            use_grouped_bar = st.checkbox("指定格式圖：分組柱狀圖 + 誤差棒", value=False)
             use_calib = st.checkbox("Calibration curve", value=False)
             use_lodloq = st.checkbox("LOD / LOQ", value=False)
             use_pa = st.checkbox("Precision & Accuracy (QC)", value=False)
@@ -255,8 +259,40 @@ def main() -> None:
             )
         params["descriptive"] = {"numeric_cols": desc_features}
 
+    if use_grouped_bar:
+        st.markdown("#### 2) 指定格式圖：分組柱狀圖 + 誤差棒")
+        st.caption("用途：生成你提供的那種圖（分組 bar + error bars + 參考線）")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            gb_category_col = st.selectbox("X 軸分類欄位", options=all_cols, key="gb_category_col")
+        with col2:
+            gb_group_col = st.selectbox("分組欄位（圖例）", options=all_cols, key="gb_group_col")
+        with col3:
+            gb_value_col = st.selectbox("數值欄位（Y）", options=all_cols, key="gb_value_col")
+        col4, col5, col6 = st.columns(3)
+        with col4:
+            gb_error_type = st.selectbox("誤差棒類型", options=["sd", "sem", "95ci", "none"], key="gb_error_type")
+        with col5:
+            gb_title = st.text_input("圖標題", value="Absolute Matrix Effect", key="gb_title")
+        with col6:
+            gb_y_label = st.text_input("Y 軸標籤", value="Absolute Matrix Factor", key="gb_ylabel")
+        col7, col8 = st.columns(2)
+        with col7:
+            gb_use_ref = st.checkbox("加參考線", value=True, key="gb_use_ref")
+        with col8:
+            gb_ref = st.number_input("參考線 y 值", value=1.0, step=0.1, format="%.3f", key="gb_ref")
+        params["grouped_bar_error"] = {
+            "category_col": gb_category_col,
+            "group_col": gb_group_col,
+            "value_col": gb_value_col,
+            "title": gb_title,
+            "y_label": gb_y_label,
+            "error_type": gb_error_type,
+            "reference_line": float(gb_ref) if gb_use_ref else None,
+        }
+
     if use_calib:
-        st.markdown("#### 2) Calibration curve")
+        st.markdown("#### 3) Calibration curve")
         col1, col2, col3 = st.columns(3)
         with col1:
             cal_x = st.selectbox("Concentration column", options=all_cols, key="cal_x")
@@ -267,7 +303,7 @@ def main() -> None:
         params["calibration"] = {"concentration_col": cal_x, "response_col": cal_y, "weighting": cal_weight}
 
     if use_lodloq:
-        st.markdown("#### 3) LOD / LOQ")
+        st.markdown("#### 4) LOD / LOQ")
         col1, col2, col3 = st.columns(3)
         with col1:
             lod_x = st.selectbox("Concentration column", options=all_cols, key="lod_x")
@@ -283,7 +319,7 @@ def main() -> None:
         }
 
     if use_pa:
-        st.markdown("#### 4) Precision & Accuracy (QC)")
+        st.markdown("#### 5) Precision & Accuracy (QC)")
         col1, col2, col3 = st.columns(3)
         with col1:
             pa_nominal = st.selectbox("Nominal concentration column", options=all_cols, key="pa_nominal")
@@ -299,7 +335,7 @@ def main() -> None:
         }
 
     if use_me:
-        st.markdown("#### 5) Matrix effect / Recovery")
+        st.markdown("#### 6) Matrix effect / Recovery")
         st.caption("sample type 欄位需包含：`pre_spike`, `post_spike`, `neat`（大小寫不拘）")
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -315,7 +351,7 @@ def main() -> None:
         }
 
     if use_two_group:
-        st.markdown("#### 6) Two-group t-test + FDR + Volcano")
+        st.markdown("#### 7) Two-group t-test + FDR + Volcano")
         col1, col2, col3 = st.columns(3)
         with col1:
             tg_group_col = st.selectbox("Group column", options=all_cols, key="tg_group_col")
@@ -342,7 +378,7 @@ def main() -> None:
         }
 
     if use_anova:
-        st.markdown("#### 7) ANOVA + FDR")
+        st.markdown("#### 8) ANOVA + FDR")
         col1, col2 = st.columns(2)
         with col1:
             anova_group_col = st.selectbox("Group column", options=all_cols, key="anova_group_col")
@@ -356,7 +392,7 @@ def main() -> None:
         params["anova"] = {"group_col": anova_group_col, "feature_cols": anova_features}
 
     if use_pca:
-        st.markdown("#### 8) PCA")
+        st.markdown("#### 9) PCA")
         col1, col2 = st.columns(2)
         with col1:
             pca_features = st.multiselect(
@@ -389,6 +425,31 @@ def main() -> None:
                     "Descriptive statistics",
                     descriptive_statistics,
                     {"df": df, "numeric_cols": desc_features},
+                    results,
+                    errors,
+                )
+
+        if use_grouped_bar:
+            selected_names.append("Grouped bar + error bars")
+            gb_category = str(params["grouped_bar_error"]["category_col"])
+            gb_group = str(params["grouped_bar_error"]["group_col"])
+            gb_value = str(params["grouped_bar_error"]["value_col"])
+            if gb_value in {gb_category, gb_group}:
+                errors.append("指定格式圖：數值欄位請選擇和分類/分組不同的欄位。")
+            else:
+                safe_run(
+                    "Grouped bar + error bars",
+                    grouped_bar_error_analysis,
+                    {
+                        "df": df,
+                        "category_col": gb_category,
+                        "group_col": gb_group,
+                        "value_col": gb_value,
+                        "title": str(params["grouped_bar_error"]["title"]),
+                        "y_label": str(params["grouped_bar_error"]["y_label"]),
+                        "error_type": str(params["grouped_bar_error"]["error_type"]),
+                        "reference_line": params["grouped_bar_error"]["reference_line"],
+                    },
                     results,
                     errors,
                 )

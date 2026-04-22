@@ -397,6 +397,100 @@ def matrix_effect_recovery_analysis(
     )
 
 
+def grouped_bar_error_analysis(
+    df: pd.DataFrame,
+    category_col: str,
+    group_col: str,
+    value_col: str,
+    title: str = "Grouped Bar Plot",
+    y_label: str = "Value",
+    error_type: str = "sd",
+    reference_line: float | None = 1.0,
+) -> AnalysisResult:
+    work = pd.DataFrame(
+        {
+            "category": _as_series(df, category_col).astype(str),
+            "group": _as_series(df, group_col).astype(str),
+            "value": _as_numeric_series(df, value_col),
+        }
+    ).dropna()
+    if work.empty:
+        raise ValueError("No valid rows remain after parsing selected category/group/value columns.")
+
+    agg = work.groupby(["category", "group"], as_index=False)["value"].agg(["count", "mean", "std"]).reset_index()
+    agg.rename(columns={"count": "n", "mean": "mean_value", "std": "sd_value"}, inplace=True)
+    agg["sem_value"] = agg["sd_value"] / np.sqrt(np.clip(agg["n"], 1, None))
+
+    if error_type == "sd":
+        agg["error_value"] = agg["sd_value"].fillna(0)
+    elif error_type == "sem":
+        agg["error_value"] = agg["sem_value"].fillna(0)
+    elif error_type == "95ci":
+        agg["error_value"] = (1.96 * agg["sem_value"]).fillna(0)
+    else:
+        agg["error_value"] = 0.0
+
+    categories = agg["category"].drop_duplicates().tolist()
+    groups = agg["group"].drop_duplicates().tolist()
+    if not categories or not groups:
+        raise ValueError("Cannot create grouped bar chart from the selected columns.")
+
+    x = np.arange(len(categories), dtype=float)
+    bar_span = 0.8
+    width = bar_span / max(len(groups), 1)
+
+    fig, ax = plt.subplots(figsize=(max(10, len(categories) * 1.3), 6))
+    for idx, group_name in enumerate(groups):
+        group_df = agg[agg["group"] == group_name].set_index("category").reindex(categories)
+        means = group_df["mean_value"].to_numpy(dtype=float)
+        errs = group_df["error_value"].fillna(0).to_numpy(dtype=float)
+        offset = (idx - (len(groups) - 1) / 2) * width
+        ax.bar(
+            x + offset,
+            means,
+            width=width * 0.92,
+            yerr=errs,
+            capsize=4,
+            linewidth=0.8,
+            edgecolor="#666666",
+            label=str(group_name),
+        )
+
+    if reference_line is not None:
+        ax.axhline(float(reference_line), linestyle="--", color="#4C72B0", linewidth=1.2)
+    ax.set_xticks(x)
+    ax.set_xticklabels(categories, rotation=45, ha="right")
+    ax.set_ylabel(y_label)
+    ax.set_xlabel(category_col)
+    ax.set_title(title)
+    ax.legend(title=group_col)
+    fig.tight_layout()
+
+    summary = {
+        "n_rows_used": int(work.shape[0]),
+        "n_categories": int(len(categories)),
+        "n_groups": int(len(groups)),
+        "error_type": error_type,
+    }
+
+    code = (
+        f"tmp = pd.DataFrame({{'category': df['{category_col}'], 'group': df['{group_col}'], 'value': df['{value_col}']}})\n"
+        "tmp['value'] = pd.to_numeric(tmp['value'], errors='coerce')\n"
+        "tmp = tmp.dropna()\n"
+        "agg = tmp.groupby(['category','group'])['value'].agg(['count','mean','std']).reset_index()\n"
+        f"# error_type={error_type}; reference_line={reference_line}\n"
+        "# Plot grouped bars with yerr from SD/SEM/95%CI\n"
+    )
+
+    return AnalysisResult(
+        name="Grouped Bar + Error Bars",
+        tables={"grouped_summary": agg},
+        figures={"grouped_bar_error_plot": fig},
+        summary=summary,
+        code=code,
+    )
+
+
 def two_group_univariate_analysis(
     df: pd.DataFrame, group_col: str, feature_cols: list[str], group_a: str, group_b: str
 ) -> AnalysisResult:
