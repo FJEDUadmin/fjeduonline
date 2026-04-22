@@ -24,6 +24,18 @@ class AnalysisResult:
     code: str
 
 
+def _as_series(df: pd.DataFrame, col: str) -> pd.Series:
+    data = df[col]
+    if isinstance(data, pd.DataFrame):
+        # Guard against duplicate column names producing 2D frames.
+        data = data.iloc[:, 0]
+    return data
+
+
+def _as_numeric_series(df: pd.DataFrame, col: str) -> pd.Series:
+    return pd.to_numeric(_as_series(df, col), errors="coerce")
+
+
 def apply_publication_style() -> None:
     """Apply an academic publication-ready plotting theme."""
     sns.set_theme(style="whitegrid", context="talk", palette="colorblind")
@@ -46,7 +58,10 @@ def apply_publication_style() -> None:
 
 
 def descriptive_statistics(df: pd.DataFrame, numeric_cols: list[str]) -> AnalysisResult:
-    data = df[numeric_cols].copy()
+    if not numeric_cols:
+        raise ValueError("Please provide at least one numeric column.")
+
+    data = pd.DataFrame({col: _as_numeric_series(df, col) for col in numeric_cols})
     describe_df = data.describe().T
     describe_df["missing_n"] = data.isna().sum()
     describe_df["missing_pct"] = (data.isna().mean() * 100).round(2)
@@ -71,9 +86,16 @@ def descriptive_statistics(df: pd.DataFrame, numeric_cols: list[str]) -> Analysi
         axes = np.array([axes])
 
     for row_idx, col in enumerate(plot_cols):
-        sns.histplot(data[col].dropna(), kde=True, ax=axes[row_idx, 0], color="#4C72B0")
+        series = pd.to_numeric(data[col], errors="coerce").dropna()
+        if series.empty:
+            axes[row_idx, 0].text(0.5, 0.5, "No numeric data", ha="center", va="center")
+            axes[row_idx, 1].text(0.5, 0.5, "No numeric data", ha="center", va="center")
+            axes[row_idx, 0].set_axis_off()
+            axes[row_idx, 1].set_axis_off()
+            continue
+        sns.histplot(series, kde=True, ax=axes[row_idx, 0], color="#4C72B0")
         axes[row_idx, 0].set_title(f"Histogram + KDE: {col}")
-        sns.boxplot(x=data[col], ax=axes[row_idx, 1], color="#55A868")
+        sns.boxplot(y=series, ax=axes[row_idx, 1], color="#55A868")
         axes[row_idx, 1].set_title(f"Boxplot: {col}")
     fig.tight_layout()
 
@@ -313,10 +335,17 @@ def precision_accuracy_analysis(
 def matrix_effect_recovery_analysis(
     df: pd.DataFrame, level_col: str, sample_type_col: str, response_col: str
 ) -> AnalysisResult:
-    work = df[[level_col, sample_type_col, response_col]].dropna().copy()
-    work[sample_type_col] = work[sample_type_col].astype(str).str.lower().str.strip()
+    work = pd.DataFrame(
+        {
+            "level": _as_series(df, level_col),
+            "sample_type": _as_series(df, sample_type_col).astype(str).str.lower().str.strip(),
+            "response": _as_numeric_series(df, response_col),
+        }
+    ).dropna()
+    if work.empty:
+        raise ValueError("No valid rows remain after parsing level/sample_type/response columns.")
 
-    grouped = work.groupby([level_col, sample_type_col])[response_col].mean().unstack()
+    grouped = work.groupby(["level", "sample_type"])["response"].mean().unstack()
     required = {"pre_spike", "post_spike", "neat"}
     missing = required - set(grouped.columns)
     if missing:
@@ -334,12 +363,12 @@ def matrix_effect_recovery_analysis(
 
     fig, ax = plt.subplots(figsize=(10, 6))
     melted = result_df.melt(
-        id_vars=[level_col],
+        id_vars=["level"],
         value_vars=["recovery_pct", "matrix_effect_factor_pct", "process_efficiency_pct"],
         var_name="metric",
         value_name="value",
     )
-    sns.barplot(data=melted, x=level_col, y="value", hue="metric", ax=ax)
+    sns.barplot(data=melted, x="level", y="value", hue="metric", ax=ax)
     ax.axhline(100, color="black", linestyle="--", linewidth=1)
     ax.set_ylabel("%")
     ax.set_title("Recovery / Matrix Effect / Process Efficiency")

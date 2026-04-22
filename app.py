@@ -27,6 +27,21 @@ def slugify(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
 
 
+def make_unique_columns(columns: list[str]) -> list[str]:
+    """Make duplicated column names unique while preserving order."""
+    seen: dict[str, int] = {}
+    unique_cols: list[str] = []
+    for col in columns:
+        base = str(col).strip() if str(col).strip() else "unnamed"
+        if base not in seen:
+            seen[base] = 0
+            unique_cols.append(base)
+            continue
+        seen[base] += 1
+        unique_cols.append(f"{base}__dup{seen[base]}")
+    return unique_cols
+
+
 def save_run_artifacts(
     run_dir: Path,
     uploaded_bytes: bytes,
@@ -174,6 +189,15 @@ def main() -> None:
         st.error("CSV 沒有資料列。")
         return
 
+    original_cols = [str(c) for c in df.columns]
+    unique_cols = make_unique_columns(original_cols)
+    if original_cols != unique_cols:
+        rename_df = pd.DataFrame({"original_column": original_cols, "renamed_column": unique_cols})
+        df.columns = unique_cols
+        st.warning("偵測到重複欄名，系統已自動重新命名避免分析錯誤。")
+        with st.expander("查看欄名重新命名對照表", expanded=False):
+            st.dataframe(rename_df, use_container_width=True, height=220)
+
     st.success(f"讀取成功：{df.shape[0]} rows × {df.shape[1]} columns")
     with st.expander("資料預覽與欄位資訊", expanded=False):
         st.dataframe(df.head(20), use_container_width=True)
@@ -190,28 +214,45 @@ def main() -> None:
         st.session_state.run_history = []
 
     st.subheader("分析勾選與參數設定")
-    c1, c2 = st.columns(2)
-    with c1:
+    st.markdown("**三步驟：** 1) 上傳 CSV  2) 勾選分析  3) 按「執行已勾選分析」")
+    newbie_mode = st.toggle("新手模式（只顯示常用項目）", value=True)
+    if newbie_mode:
         use_desc = st.checkbox("Descriptive statistics + 分布檢查", value=True)
-        use_calib = st.checkbox("Calibration curve", value=False)
-        use_lodloq = st.checkbox("LOD / LOQ", value=False)
-        use_pa = st.checkbox("Precision & Accuracy (QC)", value=False)
-    with c2:
         use_me = st.checkbox("Matrix effect / Recovery", value=False)
-        use_two_group = st.checkbox("Two-group t-test + Volcano", value=False)
-        use_anova = st.checkbox("ANOVA + FDR", value=False)
-        use_pca = st.checkbox("PCA", value=False)
+        with st.expander("進階分析（可選）", expanded=False):
+            use_calib = st.checkbox("Calibration curve", value=False)
+            use_lodloq = st.checkbox("LOD / LOQ", value=False)
+            use_pa = st.checkbox("Precision & Accuracy (QC)", value=False)
+            use_two_group = st.checkbox("Two-group t-test + Volcano", value=False)
+            use_anova = st.checkbox("ANOVA + FDR", value=False)
+            use_pca = st.checkbox("PCA", value=False)
+    else:
+        c1, c2 = st.columns(2)
+        with c1:
+            use_desc = st.checkbox("Descriptive statistics + 分布檢查", value=True)
+            use_calib = st.checkbox("Calibration curve", value=False)
+            use_lodloq = st.checkbox("LOD / LOQ", value=False)
+            use_pa = st.checkbox("Precision & Accuracy (QC)", value=False)
+        with c2:
+            use_me = st.checkbox("Matrix effect / Recovery", value=False)
+            use_two_group = st.checkbox("Two-group t-test + Volcano", value=False)
+            use_anova = st.checkbox("ANOVA + FDR", value=False)
+            use_pca = st.checkbox("PCA", value=False)
 
     params: dict[str, dict[str, str | list[str] | None]] = {}
 
     if use_desc:
         st.markdown("#### 1) Descriptive statistics")
-        desc_features = st.multiselect(
-            "數值欄位",
-            options=numeric_cols,
-            default=numeric_cols[: min(10, len(numeric_cols))],
-            key="desc_features",
-        )
+        if newbie_mode:
+            desc_features = numeric_cols[: min(8, len(numeric_cols))]
+            st.caption(f"新手模式自動選擇數值欄位：{len(desc_features)} 個")
+        else:
+            desc_features = st.multiselect(
+                "數值欄位",
+                options=numeric_cols,
+                default=numeric_cols[: min(10, len(numeric_cols))],
+                key="desc_features",
+            )
         params["descriptive"] = {"numeric_cols": desc_features}
 
     if use_calib:
@@ -399,18 +440,24 @@ def main() -> None:
 
         if use_me:
             selected_names.append("Matrix effect / Recovery")
-            safe_run(
-                "Matrix effect / Recovery",
-                matrix_effect_recovery_analysis,
-                {
-                    "df": df,
-                    "level_col": params["matrix_effect"]["level_col"],
-                    "sample_type_col": params["matrix_effect"]["sample_type_col"],
-                    "response_col": params["matrix_effect"]["response_col"],
-                },
-                results,
-                errors,
-            )
+            me_level = str(params["matrix_effect"]["level_col"])
+            me_type = str(params["matrix_effect"]["sample_type_col"])
+            me_resp = str(params["matrix_effect"]["response_col"])
+            if len({me_level, me_type, me_resp}) < 3:
+                errors.append("Matrix effect / Recovery: level / sample type / response 需選擇不同欄位。")
+            else:
+                safe_run(
+                    "Matrix effect / Recovery",
+                    matrix_effect_recovery_analysis,
+                    {
+                        "df": df,
+                        "level_col": me_level,
+                        "sample_type_col": me_type,
+                        "response_col": me_resp,
+                    },
+                    results,
+                    errors,
+                )
 
         if use_two_group:
             selected_names.append("Two-group t-test + Volcano")
