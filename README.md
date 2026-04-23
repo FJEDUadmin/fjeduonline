@@ -1,47 +1,34 @@
-# 本機線上質譜統計分析系統
+# CSV + GPT 自動統計分析頁面
 
-這是一個可在本機執行的網頁工具（Streamlit），專為質譜方法開發與常見期刊分析流程設計。
+本專案已改為「提示詞驅動」分析流程：
 
-你可以：
 - 上傳 CSV
-- 勾選要做的統計分析
-- 一鍵產生統計表與學術風格圖表
-- 每次分析自動保存執行程式碼與結果（不需要每次手寫程式）
+- 用白話輸入分析目標（提示詞）
+- 系統透過 GPT 自動產生分析程式碼
+- 自動執行並輸出統計表與圖表
+- 每次分析自動保存程式碼與輸出
 
 ---
 
-## 功能總覽
+## 你會得到什麼
 
-### 1) 常見質譜方法開發分析
-- Descriptive statistics + 分布檢查（histogram/KDE/boxplot + Shapiro）
-- Calibration curve（OLS / 1/x / 1/x²）
-- LOD / LOQ（以 SD/slope 公式估算）
-- Precision & Accuracy（CV%、RE%）
-- Matrix effect / Recovery / Process efficiency
-
-### 2) 常見 LC-MS 研究分析
-- Two-group t-test + FDR + Volcano plot
-- One-way ANOVA + FDR
-- PCA（score plot + explained variance）
-
-### 3) 可追蹤稽核紀錄（每次分析）
-每次按下執行後，會在本機建立：
+每次執行都會建立：
 
 `analysis_runs/<timestamp>/`
 
-內容包含：
+包含：
 - `input_<原始檔名>.csv`
 - `metadata.json`
 - `tables/*.csv`
-- `figures/*.png`（300 dpi）
+- `figures/*.png`
 - `run_report.md`
-- `run_code.py`（本次分析實際執行程式碼片段）
+- `run_code.py`（GPT 生成並執行的程式碼）
 
 ---
 
 ## 安裝與啟動
 
-> 建議 Python 3.10+
+> 建議 Python 3.12
 
 ```bash
 python -m venv .venv
@@ -50,47 +37,40 @@ pip install -r requirements.txt
 streamlit run app.py --server.port 8501
 ```
 
-啟動後打開瀏覽器：
+啟動後開啟：
 
 `http://localhost:8501`
 
 ---
 
-## CSV 欄位需求建議
+## GPT 連動設定
 
-系統是「欄位可選式」，你可自由對應欄位；但不同分析需要不同資料欄位：
+側欄可設定：
+- API Key
+- 模型名稱（預設 `gpt-4o-mini`）
+- Base URL（如使用相容 API 可填）
 
-- Calibration / LOD-LOQ：至少要有 concentration 和 response 欄位
-- Precision & Accuracy：需要 nominal 與 measured 欄位
-- Matrix/Recovery：需要 level、sample type、response
-  - sample type 需包含：`pre_spike`, `post_spike`, `neat`
-- Two-group / ANOVA / PCA：需要群組欄位（類別）與多個數值特徵欄位
+也可用環境變數：
 
----
-
-## 期刊等級圖表設定
-
-已預設 publication-oriented 風格：
-- 高解析度輸出（300 dpi）
-- 白底與可讀格線
-- 色盲友善配色（colorblind palette）
-- 可直接在報告與投影片中使用
+```bash
+export OPENAI_API_KEY="..."
+export OPENAI_BASE_URL="..."
+```
 
 ---
 
-## 來源依據（分析項目設計）
+## 使用方式（最簡）
 
-分析項目對齊常見質譜/代謝體研究與方法驗證流程，涵蓋：
-- 校正曲線與加權回歸
-- LOD/LOQ 估算
-- QC 精密度與準確度
-- 基質效應與回收率
-- t-test/ANOVA + FDR
-- PCA 與火山圖（Volcano）
+1. 上傳 CSV
+2. 在「分析目標提示詞」輸入白話需求，例如：
+
+   `請比較三組樣品在各 transition 的 absolute matrix effect，畫分組柱狀圖加 SD 誤差棒並加 y=1 參考線，列出每組平均值。`
+
+3. 點擊「用 GPT 自動分析並產出圖表」
 
 ---
 
-## 注意
+## 注意事項
 
-- 本工具是本機分析輔助系統，不會自動取代法規審查或完整 SOP。
-- 若需符合法規提交（例如 FDA/ICH），請依你的實驗室 SOP、儀器流程與指南進一步確認判定閾值。
+- GPT 生成程式碼會在受限環境中執行，但仍建議僅用於研究分析與報表輔助。
+- 若資料量很大，建議先在 CSV 做欄位精簡，可降低推理延遲。
