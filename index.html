@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>飛翔少年教育機構｜線上排課系統</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
+    ></script>
+    <script defer src="./app.js"></script>
+  </head>
+  <body>
+    <header class="page-header">
+      <h1>飛翔少年教育機構｜線上排課系統</h1>
+      <p>支援排課、跳課/補課、成本計算、Excel 匯入與匯出。</p>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>後台主檔管理</h2>
+        <p class="hint">
+          可匯入 Excel（建議工作表名稱：Teachers、Grades、Subjects、HourlyRates）。
+        </p>
+        <div class="row">
+          <input id="masterImportFile" type="file" accept=".xlsx,.xls,.csv" />
+          <button id="importMasterBtn" type="button">匯入主檔 Excel</button>
+          <button id="resetMasterBtn" type="button" class="ghost">重設主檔</button>
+        </div>
+
+        <div class="master-grid">
+          <div class="mini-card">
+            <h3>老師名單</h3>
+            <div class="row">
+              <input id="teacherNameInput" placeholder="老師名稱" />
+              <input
+                id="teacherSalaryInput"
+                type="number"
+                min="0"
+                step="0.5"
+                placeholder="教師時薪"
+              />
+              <button id="addTeacherBtn" type="button">新增</button>
+            </div>
+            <ul id="teacherList" class="item-list"></ul>
+          </div>
+
+          <div class="mini-card">
+            <h3>年級種類</h3>
+            <div class="row">
+              <input id="gradeInput" placeholder="例如：國一" />
+              <button id="addGradeBtn" type="button">新增</button>
+            </div>
+            <ul id="gradeList" class="item-list"></ul>
+          </div>
+
+          <div class="mini-card">
+            <h3>科目種類</h3>
+            <div class="row">
+              <input id="subjectInput" placeholder="例如：數學" />
+              <button id="addSubjectBtn" type="button">新增</button>
+            </div>
+            <ul id="subjectList" class="item-list"></ul>
+          </div>
+
+          <div class="mini-card">
+            <h3>學費時薪種類</h3>
+            <div class="row">
+              <input id="rateNameInput" placeholder="方案名稱" />
+              <input
+                id="rateValueInput"
+                type="number"
+                min="0"
+                step="0.5"
+                placeholder="時薪"
+              />
+              <button id="addRateBtn" type="button">新增</button>
+            </div>
+            <ul id="rateList" class="item-list"></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>排課設定</h2>
+        <form id="scheduleForm" class="form-grid">
+          <label>
+            老師名稱
+            <select id="teacherSelect" required></select>
+          </label>
+
+          <label>
+            上課學生名稱
+            <input id="studentName" required />
+          </label>
+
+          <label>
+            上課年級
+            <select id="gradeSelect" required></select>
+          </label>
+
+          <label>
+            上課科目
+            <select id="subjectSelect" required></select>
+          </label>
+
+          <label>
+            上課日期
+            <input id="firstClassDate" type="date" required />
+          </label>
+
+          <label>
+            上課星期（自動）
+            <input id="weekdayDisplay" readonly />
+          </label>
+
+          <label>
+            課程重複週期
+            <select id="recurrence" required>
+              <option value="weekly">每週</option>
+              <option value="monthly">每月</option>
+            </select>
+          </label>
+
+          <label>
+            排課長度（月）
+            <select id="durationMonths" required></select>
+          </label>
+
+          <label>
+            上課時間
+            <input id="startTime" type="time" required />
+          </label>
+
+          <label>
+            下課時間
+            <input id="endTime" type="time" required />
+          </label>
+
+          <label>
+            每堂總時數（自動）
+            <input id="classHours" readonly />
+          </label>
+
+          <label>
+            課程學費時薪
+            <div class="stack">
+              <select id="hourlyRateTypeSelect"></select>
+              <input id="tuitionHourlyRate" type="number" min="0" step="0.5" required />
+            </div>
+          </label>
+
+          <label>
+            教師薪水時薪（成本）
+            <input id="teacherHourlySalary" type="number" min="0" step="0.5" required />
+          </label>
+
+          <fieldset class="exceptions">
+            <legend>停課 / 跳課日期</legend>
+            <div class="row">
+              <input id="skipDateInput" type="date" />
+              <button id="addSkipDateBtn" type="button">新增停課日期</button>
+            </div>
+            <ul id="skipDateList" class="tag-list"></ul>
+          </fieldset>
+
+          <fieldset class="exceptions">
+            <legend>補課日期（家長臨時改課）</legend>
+            <div class="row">
+              <input id="makeupDateInput" type="date" />
+              <button id="addMakeupDateBtn" type="button">新增補課日期</button>
+            </div>
+            <ul id="makeupDateList" class="tag-list"></ul>
+          </fieldset>
+
+          <button class="primary" type="submit">建立排課</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <div class="row row-space">
+          <h2>排課結果</h2>
+          <div class="row">
+            <button id="exportExcelBtn" type="button">匯出排課 Excel</button>
+            <button id="clearSchedulesBtn" type="button" class="ghost">清空排課資料</button>
+          </div>
+        </div>
+
+        <div id="summaryCards" class="summary-grid"></div>
+        <div id="monthlySummary" class="table-wrap"></div>
+        <div id="scheduleTableWrap" class="table-wrap"></div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" aria-live="polite"></div>
+  </body>
+</html>
