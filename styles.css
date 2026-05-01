@@ -1,0 +1,278 @@
+:root {
+  color-scheme: light;
+  font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  line-height: 1.4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f4f7fb;
+  color: #1d2939;
+}
+
+.page-header {
+  padding: 1.5rem 2rem;
+  background: linear-gradient(120deg, #0f4da2, #1f78d1);
+  color: #fff;
+}
+
+.page-header h1 {
+  margin: 0 0 0.3rem;
+  font-size: 1.6rem;
+}
+
+.page-header p {
+  margin: 0;
+  opacity: 0.92;
+}
+
+.layout {
+  max-width: 1200px;
+  margin: 1rem auto 2rem;
+  padding: 0 1rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 2px 10px rgba(16, 24, 40, 0.08);
+}
+
+.card h2 {
+  margin-top: 0;
+}
+
+.hint {
+  margin-top: 0;
+  color: #475467;
+  font-size: 0.95rem;
+}
+
+.master-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0.8rem;
+  margin-top: 0.8rem;
+}
+
+.mini-card {
+  background: #f8fafc;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 0.8rem;
+}
+
+.mini-card h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.8rem;
+}
+
+label,
+fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+input,
+select,
+button {
+  font: inherit;
+}
+
+input,
+select {
+  padding: 0.5rem;
+  border: 1px solid #98a2b3;
+  border-radius: 6px;
+  background: #fff;
+}
+
+button {
+  border: none;
+  border-radius: 6px;
+  padding: 0.55rem 0.8rem;
+  background: #1570ef;
+  color: #fff;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(0.96);
+}
+
+button.ghost {
+  background: #e4e7ec;
+  color: #1d2939;
+}
+
+button.primary {
+  grid-column: 1 / -1;
+  justify-self: start;
+  background: #0f4da2;
+}
+
+.row {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.row-space {
+  justify-content: space-between;
+}
+
+.stack {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.item-list,
+.tag-list {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.item-list li,
+.tag-list li {
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tag-list li {
+  background: #eff8ff;
+}
+
+.remove-btn {
+  background: #f04438;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.86rem;
+}
+
+.exceptions {
+  border: 1px dashed #d0d5dd;
+  border-radius: 8px;
+  padding: 0.6rem;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.6rem;
+  margin: 0.8rem 0;
+}
+
+.summary-card {
+  background: #f8fafc;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 0.65rem;
+}
+
+.summary-card h3 {
+  margin: 0;
+  color: #475467;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.summary-card p {
+  margin: 0.35rem 0 0;
+  font-size: 1.12rem;
+  font-weight: 700;
+}
+
+.table-wrap {
+  overflow: auto;
+  margin-top: 0.8rem;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 920px;
+  background: #fff;
+}
+
+th,
+td {
+  border: 1px solid #d0d5dd;
+  padding: 0.45rem;
+  text-align: left;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+th {
+  background: #f2f4f7;
+}
+
+td input[type="date"] {
+  width: 150px;
+}
+
+.badge {
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.badge.makeup {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.badge.normal {
+  background: #eff8ff;
+  color: #175cd3;
+}
+
+.toast {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  background: #101828;
+  color: #fff;
+  padding: 0.7rem 0.95rem;
+  border-radius: 8px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+
+.toast.show {
+  opacity: 0.95;
+  transform: translateY(0);
+}
+
+@media (max-width: 760px) {
+  .page-header {
+    padding: 1.2rem 1rem;
+  }
+}
