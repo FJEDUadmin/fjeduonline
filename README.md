@@ -22,12 +22,20 @@
 1. 下載專案
 2. 直接用瀏覽器開啟 `index.html`
 
-### 部署到 GitHub Pages
-1. Push 到 GitHub repository
+### 部署到 GitHub Pages（建議）
+本專案已內建 `.github/workflows/deploy-pages.yml`，可用 GitHub Actions 自動部署。
+
+1. Push 到 GitHub repository（`main` 或 `cursor/scheduling-system-3da6` 分支都會觸發）
 2. 在 GitHub 專案設定 `Settings -> Pages`
-3. Source 選擇 `Deploy from a branch`
-4. Branch 選 `main`（或你的分支）與 `/root`
-5. 儲存後即可得到線上網址
+3. Source 選擇 `GitHub Actions`
+4. 到 `Actions` 頁面確認 `Deploy static site to GitHub Pages` 成功
+5. 成功後在 Pages 頁面會看到上線網址
+
+### 部署到 GitHub Pages（手動分支）
+1. 在 GitHub 專案設定 `Settings -> Pages`
+2. Source 選擇 `Deploy from a branch`
+3. Branch 選 `main`（或你的分支）與 `/root`
+4. 儲存後即可得到線上網址
 
 ---
 
