@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -18,6 +20,16 @@ class LoginRequest(BaseModel):
 class SolveRequest(BaseModel):
     question: str = Field(min_length=3, max_length=5000)
     grade: str | None = Field(default=None, max_length=50)
+
+
+class TutorStartRequest(BaseModel):
+    problem: str = Field(min_length=3, max_length=5000)
+    grade: str | None = Field(default=None, max_length=50)
+
+
+class TutorReplyRequest(BaseModel):
+    session_id: str = Field(min_length=10, max_length=120)
+    answer: str = Field(min_length=1, max_length=5000)
 
 
 class UserResponse(BaseModel):
@@ -43,4 +55,25 @@ class AuthResponse(BaseModel):
 
 class SolveResponse(BaseModel):
     answer: str
+    entitlement: EntitlementResponse
+
+
+class TutorStartResponse(BaseModel):
+    session_id: str
+    status: Literal["active"]
+    step: int
+    min_required_steps: int
+    question: str
+    entitlement: EntitlementResponse
+
+
+class TutorReplyResponse(BaseModel):
+    session_id: str
+    status: Literal["active", "completed", "refused"]
+    step: int
+    judgement: Literal["correct", "incorrect", "dont_know"]
+    feedback: str
+    next_question: str | None
+    final_explanation: str | None
+    consecutive_unknown_count: int
     entitlement: EntitlementResponse

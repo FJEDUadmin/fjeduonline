@@ -46,6 +46,26 @@ class Database:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS tutor_sessions (
+                    id TEXT PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    problem TEXT NOT NULL,
+                    grade TEXT,
+                    status TEXT NOT NULL,
+                    total_questions_asked INTEGER NOT NULL,
+                    consecutive_unknown_count INTEGER NOT NULL,
+                    difficulty_level INTEGER NOT NULL,
+                    current_question TEXT NOT NULL,
+                    history_json TEXT NOT NULL,
+                    final_explanation TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY(user_id) REFERENCES users(id)
+                )
+                """
+            )
             conn.commit()
 
     def create_user(
@@ -107,3 +127,70 @@ class Database:
                 (token,),
             ).fetchone()
         return dict(row) if row else None
+
+    def create_tutor_session(
+        self,
+        *,
+        session_id: str,
+        user_id: int,
+        problem: str,
+        grade: str | None,
+        status: str,
+        total_questions_asked: int,
+        consecutive_unknown_count: int,
+        difficulty_level: int,
+        current_question: str,
+        history_json: str,
+        final_explanation: str | None,
+    ) -> dict[str, Any]:
+        now = utcnow_iso()
+        with self.connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO tutor_sessions (
+                    id, user_id, problem, grade, status, total_questions_asked,
+                    consecutive_unknown_count, difficulty_level, current_question,
+                    history_json, final_explanation, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    session_id,
+                    user_id,
+                    problem,
+                    grade,
+                    status,
+                    total_questions_asked,
+                    consecutive_unknown_count,
+                    difficulty_level,
+                    current_question,
+                    history_json,
+                    final_explanation,
+                    now,
+                    now,
+                ),
+            )
+            conn.commit()
+        return self.get_tutor_session(session_id=session_id, user_id=user_id)
+
+    def get_tutor_session(self, *, session_id: str, user_id: int) -> dict[str, Any] | None:
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM tutor_sessions WHERE id = ? AND user_id = ?",
+                (session_id, user_id),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def update_tutor_session(self, *, session_id: str, user_id: int, **fields: Any) -> None:
+        if not fields:
+            return
+
+        fields["updated_at"] = utcnow_iso()
+        assignments = ", ".join(f"{column} = ?" for column in fields)
+        values = list(fields.values()) + [session_id, user_id]
+
+        with self.connect() as conn:
+            conn.execute(
+                f"UPDATE tutor_sessions SET {assignments} WHERE id = ? AND user_id = ?",
+                values,
+            )
+            conn.commit()

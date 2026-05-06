@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
-from fastapi import Depends, FastAPI, Header, HTTPException
+
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi import Request
 
 from .auth import hash_password, new_session_token, verify_password
 from .config import load_settings
@@ -16,13 +16,18 @@ from .entitlements import compute_entitlement
 from .gemini_client import GeminiClient, GeminiConfig, GeminiError
 from .schemas import (
     AuthResponse,
+    EntitlementResponse,
     LoginRequest,
     RegisterRequest,
     SolveRequest,
     SolveResponse,
-    EntitlementResponse,
+    TutorReplyRequest,
+    TutorReplyResponse,
+    TutorStartRequest,
+    TutorStartResponse,
     UserResponse,
 )
+from .tutor_service import MIN_REQUIRED_QUESTIONS, TutorService
 
 settings = load_settings()
 db = Database(settings.database_path)
@@ -33,8 +38,9 @@ gemini = GeminiClient(
         allow_mock=settings.allow_mock_gemini,
     )
 )
+tutor_service = TutorService(db=db, gemini=gemini)
 
-app = FastAPI(title="AI Tutor API", version="0.1.0")
+app = FastAPI(title="AI Tutor API", version="0.3.0")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 
@@ -147,3 +153,58 @@ def solve(payload: SolveRequest, current_user: dict = Depends(get_current_user))
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     return SolveResponse(answer=answer, entitlement=entitlement)
+
+
+@app.post("/coach/start", response_model=TutorStartResponse)
+def start_coaching(payload: TutorStartRequest, current_user: dict = Depends(get_current_user)) -> TutorStartResponse:
+    entitlement = entitlement_for_user(current_user)
+    if not entitlement.is_active:
+        raise HTTPException(status_code=403, detail=f"目前無可用方案：{entitlement.reason}")
+
+    try:
+        session = tutor_service.start_session(
+            user_id=current_user["id"],
+            problem=payload.problem,
+            grade=payload.grade,
+        )
+    except GeminiError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return TutorStartResponse(
+        session_id=session["id"],
+        status="active",
+        step=int(session["total_questions_asked"]),
+        min_required_steps=MIN_REQUIRED_QUESTIONS,
+        question=session["current_question"],
+        entitlement=entitlement,
+    )
+
+
+@app.post("/coach/reply", response_model=TutorReplyResponse)
+def reply_coaching(payload: TutorReplyRequest, current_user: dict = Depends(get_current_user)) -> TutorReplyResponse:
+    entitlement = entitlement_for_user(current_user)
+    if not entitlement.is_active:
+        raise HTTPException(status_code=403, detail=f"目前無可用方案：{entitlement.reason}")
+
+    try:
+        result = tutor_service.reply_session(
+            user_id=current_user["id"],
+            session_id=payload.session_id,
+            answer=payload.answer,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except GeminiError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return TutorReplyResponse(
+        session_id=result.session_id,
+        status=result.status,
+        step=result.step,
+        judgement=result.judgement,
+        feedback=result.feedback,
+        next_question=result.next_question,
+        final_explanation=result.final_explanation,
+        consecutive_unknown_count=result.consecutive_unknown_count,
+        entitlement=entitlement,
+    )

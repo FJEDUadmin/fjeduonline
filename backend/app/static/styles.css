@@ -1,5 +1,4 @@
 :root {
-  --bg: #f2f6ff;
   --ink: #1f2a44;
   --ink-muted: #5b6785;
   --white: #ffffff;
@@ -8,8 +7,6 @@
   --accent: #10b981;
   --accent-strong: #059669;
   --border: #d9e1ff;
-  --danger: #ef4444;
-  --warning: #f59e0b;
 }
 
 * {
@@ -28,7 +25,7 @@ body {
 }
 
 .page-wrap {
-  width: min(1140px, 94vw);
+  width: min(1180px, 94vw);
   margin: 30px auto 40px;
   display: grid;
   gap: 18px;
@@ -56,14 +53,12 @@ body {
 .hero h1 {
   margin: 12px 0 8px;
   font-size: clamp(28px, 4vw, 44px);
-  line-height: 1.2;
 }
 
 .hero p {
   margin: 0;
-  max-width: 760px;
+  max-width: 780px;
   line-height: 1.6;
-  opacity: 0.96;
 }
 
 .grid {
@@ -153,7 +148,6 @@ textarea {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 2px;
 }
 
 .checkbox-row input {
@@ -180,6 +174,12 @@ textarea {
   color: #fff;
 }
 
+.btn--light {
+  border: 1px solid #bcd2ff;
+  background: #f5f8ff;
+  color: #35519a;
+}
+
 .btn:disabled {
   opacity: 0.62;
   cursor: not-allowed;
@@ -193,25 +193,95 @@ textarea {
   background: #f7f9ff;
 }
 
-.entitlement h3,
-.answer h3 {
+.entitlement h3 {
   margin: 0 0 8px;
   font-size: 16px;
 }
 
-.entitlement p,
-.answer p {
+.entitlement p {
   margin: 0;
   line-height: 1.6;
 }
 
-.answer {
-  margin-top: 12px;
-  border: 1px solid #d7f5e7;
-  background: #f4fffa;
+.rule-box {
+  margin-bottom: 12px;
+  padding: 12px;
   border-radius: 12px;
-  padding: 14px;
+  border: 1px dashed #9bc8ff;
+  background: #f2f8ff;
+}
+
+.rule-box strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.rule-box ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--ink-muted);
+  line-height: 1.6;
+}
+
+.session-meta {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #d8e4ff;
+  background: #f9fbff;
+  color: #35519a;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.chat-thread {
+  border: 1px solid #d8e6ff;
+  border-radius: 14px;
+  background: #fbfdff;
+  min-height: 240px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.bubble {
+  max-width: 88%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.bubble p {
+  margin: 0;
   white-space: pre-wrap;
+}
+
+.bubble--assistant {
+  justify-self: start;
+  background: #eef4ff;
+  border: 1px solid #ccddff;
+}
+
+.bubble--user {
+  justify-self: end;
+  background: #eafdf3;
+  border: 1px solid #bae8cd;
+}
+
+.bubble--system {
+  justify-self: center;
+  background: #fff9eb;
+  border: 1px solid #fde2a8;
+  max-width: 94%;
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .pill {
@@ -247,10 +317,6 @@ textarea {
   color: #047857;
 }
 
-.muted {
-  color: var(--ink-muted);
-}
-
 .hidden {
   display: none;
 }
@@ -262,5 +328,9 @@ textarea {
 
   .hero {
     padding: 22px;
+  }
+
+  .bubble {
+    max-width: 96%;
   }
 }
