@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>飛翔少年 AI 助教</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="page-wrap">
+      <header class="hero">
+        <div class="hero__badge">FJ EDU ・ Flying Youth</div>
+        <h1>飛翔少年 AI 助教</h1>
+        <p>
+          一站式 AI 解題網站：輸入題目後，立即獲得重點整理、步驟拆解與易錯提醒。
+          公司上課學生可免費使用，其他學生享有 30 天試用。
+        </p>
+      </header>
+
+      <main class="grid">
+        <section class="card auth-card">
+          <div class="card__title-row">
+            <h2>帳號中心</h2>
+            <span id="userStatus" class="pill pill--muted">未登入</span>
+          </div>
+
+          <div class="tabs">
+            <button id="tabRegister" class="tab tab--active" type="button">註冊</button>
+            <button id="tabLogin" class="tab" type="button">登入</button>
+          </div>
+
+          <form id="registerForm" class="form">
+            <label>
+              姓名
+              <input id="registerName" type="text" placeholder="請輸入姓名" required />
+            </label>
+            <label>
+              Email
+              <input id="registerEmail" type="email" placeholder="name@email.com" required />
+            </label>
+            <label>
+              密碼
+              <input id="registerPassword" type="password" minlength="6" placeholder="至少 6 碼" required />
+            </label>
+            <label class="checkbox-row">
+              <input id="registerCompany" type="checkbox" />
+              <span>我是公司上課學生（免費資格）</span>
+            </label>
+            <button class="btn btn--primary" type="submit">建立帳號</button>
+          </form>
+
+          <form id="loginForm" class="form hidden">
+            <label>
+              Email
+              <input id="loginEmail" type="email" placeholder="name@email.com" required />
+            </label>
+            <label>
+              密碼
+              <input id="loginPassword" type="password" minlength="6" placeholder="請輸入密碼" required />
+            </label>
+            <button class="btn btn--primary" type="submit">登入開始解題</button>
+          </form>
+
+          <div class="entitlement" id="entitlementPanel">
+            <h3>使用方案</h3>
+            <p id="entitlementText">尚未登入</p>
+          </div>
+        </section>
+
+        <section class="card solve-card">
+          <div class="card__title-row">
+            <h2>AI 解題區</h2>
+            <span class="pill" id="apiMode">等待登入</span>
+          </div>
+
+          <form id="solveForm" class="form">
+            <label>
+              年級 / 程度
+              <input id="questionGrade" type="text" value="國三" placeholder="例如：國三、高一" />
+            </label>
+            <label>
+              題目內容
+              <textarea
+                id="questionText"
+                rows="8"
+                placeholder="請貼上題目（數學/自然/英文都可）"
+                required
+              ></textarea>
+            </label>
+            <button id="solveButton" class="btn btn--accent" type="submit" disabled>請先登入</button>
+          </form>
+
+          <article class="answer" id="answerPanel">
+            <h3>助教回覆</h3>
+            <p class="muted">登入後輸入題目，即可在此看到解題內容。</p>
+          </article>
+        </section>
+      </main>
+
+      <section id="messageBar" class="message hidden"></section>
+    </div>
+
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

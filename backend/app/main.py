@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import sqlite3
+from pathlib import Path
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi import Request
 
 from .auth import hash_password, new_session_token, verify_password
 from .config import load_settings
@@ -30,6 +35,8 @@ gemini = GeminiClient(
 )
 
 app = FastAPI(title="AI Tutor API", version="0.1.0")
+templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 
 app.add_middleware(
     CORSMiddleware,
@@ -78,6 +85,15 @@ def get_current_user(authorization: str | None = Header(default=None)) -> dict:
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/", response_class=HTMLResponse)
+def web_home(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={"page_title": "飛翔少年 AI 助教"},
+    )
 
 
 @app.post("/auth/register", response_model=AuthResponse)
