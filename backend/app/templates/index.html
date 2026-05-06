@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>飛翔少年 AI 助教</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="page-wrap">
+      <header class="hero">
+        <div class="hero__badge">FJ EDU ・ Flying Youth</div>
+        <h1>飛翔少年 AI 助教</h1>
+        <p>
+          引導式思考學習：至少 4 輪提問，答對升級、答錯降階，最後才給完整解析。
+          若連續 3 次回答「不知道」，系統會暫停解答，請你先回去思考再回來。
+        </p>
+      </header>
+
+      <main class="grid">
+        <section class="card auth-card">
+          <div class="card__title-row">
+            <h2>帳號中心</h2>
+            <span id="userStatus" class="pill pill--muted">未登入</span>
+          </div>
+
+          <div class="tabs">
+            <button id="tabRegister" class="tab tab--active" type="button">註冊</button>
+            <button id="tabLogin" class="tab" type="button">登入</button>
+          </div>
+
+          <form id="registerForm" class="form">
+            <label>
+              姓名
+              <input id="registerName" type="text" placeholder="請輸入姓名" required />
+            </label>
+            <label>
+              Email
+              <input id="registerEmail" type="email" placeholder="name@email.com" required />
+            </label>
+            <label>
+              密碼
+              <input id="registerPassword" type="password" minlength="6" placeholder="至少 6 碼" required />
+            </label>
+            <label class="checkbox-row">
+              <input id="registerCompany" type="checkbox" />
+              <span>我是公司上課學生（免費資格）</span>
+            </label>
+            <button class="btn btn--primary" type="submit">建立帳號</button>
+          </form>
+
+          <form id="loginForm" class="form hidden">
+            <label>
+              Email
+              <input id="loginEmail" type="email" placeholder="name@email.com" required />
+            </label>
+            <label>
+              密碼
+              <input id="loginPassword" type="password" minlength="6" placeholder="請輸入密碼" required />
+            </label>
+            <button class="btn btn--primary" type="submit">登入開始學習</button>
+          </form>
+
+          <div class="entitlement" id="entitlementPanel">
+            <h3>使用方案</h3>
+            <p id="entitlementText">尚未登入</p>
+          </div>
+        </section>
+
+        <section class="card solve-card">
+          <div class="card__title-row">
+            <h2>引導式思考教室</h2>
+            <span class="pill" id="apiMode">等待登入</span>
+          </div>
+
+          <div class="rule-box">
+            <strong>規則</strong>
+            <ul>
+              <li>至少 4 輪引導提問後，才提供詳細解析</li>
+              <li>答對會升級問題，答錯會降階提示</li>
+              <li>連續 3 次「不知道」會暫停解答</li>
+            </ul>
+          </div>
+
+          <form id="coachStartForm" class="form">
+            <label>
+              年級 / 程度
+              <input id="questionGrade" type="text" value="國三" placeholder="例如：國三、高一" />
+            </label>
+            <label>
+              題目內容
+              <textarea
+                id="questionText"
+                rows="5"
+                placeholder="請貼上題目（數學/自然/英文都可）"
+                required
+              ></textarea>
+            </label>
+            <button id="startButton" class="btn btn--accent" type="submit" disabled>請先登入</button>
+          </form>
+
+          <div class="session-meta" id="sessionMeta">尚未開始引導 session</div>
+
+          <div class="chat-thread" id="chatThread">
+            <div class="bubble bubble--assistant">
+              <p>登入後貼上題目，AI 助教會先一步一步提問，再給完整解析。</p>
+            </div>
+          </div>
+
+          <form id="coachReplyForm" class="form">
+            <label>
+              你的回答
+              <textarea id="replyText" rows="3" placeholder="請回答剛剛的引導問題" required></textarea>
+            </label>
+            <div class="row-actions">
+              <button id="replyButton" class="btn btn--primary" type="submit" disabled>請先開始引導</button>
+              <button id="idkButton" class="btn btn--light" type="button" disabled>我不知道</button>
+            </div>
+          </form>
+        </section>
+      </main>
+
+      <section id="messageBar" class="message hidden"></section>
+    </div>
+
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

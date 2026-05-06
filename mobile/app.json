@@ -1,0 +1,9 @@
+{
+  "expo": {
+    "name": "AI解題助教",
+    "slug": "ai-tutor-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light"
+  }
+}
